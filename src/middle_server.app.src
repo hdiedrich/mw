@@ -1,0 +1,30 @@
+%%%-------------------------------------------------------------------------%%%
+%%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
+%%% Version     : 0.1.x/initial spike                                       %%%
+%%% File        : middle_server.app.src                                     %%%
+%%% Description : Erlang application source file                            %%%
+%%% Copyright   : AI Effect Group, Berlin                                   %%%
+%%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
+%%% License     : MIT                                                       %%%
+%%% Created     : 24 May 2014                                               %%%
+%%% Changed     : 29 May 2014                                               %%%
+%%%-------------------------------------------------------------------------%%%
+%%%                                                                         %%%
+%%%  The AIX WC14 concept enables football bets on the Bitcoin blockchain   %%%
+%%%  that are decentralized, oracle-driven contacts, requiring less trust.  %%%
+%%%                                                                         %%%
+%%%-------------------------------------------------------------------------%%%
+
+{application, middle_server, [
+	{description, "Middle server for AIX World Cup 2104 Bitcoin Bet Scripts"},
+	{vsn, "0.1"},
+	{modules, []},
+	{registered, [middle_server_sup]},
+	{applications, [
+		kernel,
+		stdlib,
+		cowboy
+	]},
+	{mod, {middle_server_app, []}},
+	{env, []}
+]}.

@@ -1,0 +1,137 @@
+body 		{ font-family: sans-serif; 
+              margin: 5em;
+              color: navy;
+            }
+
+div.text	{ float: left;
+		      margin: 2em 2em 2em 0;
+		      padding: 1em 2em 1em 0em;
+            }
+
+div.box		{ border: 1px solid black;
+		      padding: 3em;
+            }
+
+div.bar		{ background-color: darkblue;
+    		  padding: 1em;
+	    	  color: white;
+		      word-spacing: 2em;
+            }
+
+.bar a		{ color: white;
+		      text-decoration: none; 
+            }
+
+textarea	{ width: 100%;
+		      height: 9em;
+            }
+
+input		{ width: 100%;
+            }
+
+.btc		{ width: 5em;
+            }
+
+hr		    { clear: both;
+            }
+
+.s          { border: 1px solid navy;
+              margin: 2px;
+              padding: 2px;
+              overflow: hidden;
+            }
+            
+.transblock,
+.block      { float: left;
+              min-width: 10em;
+            }
+
+.block      { float: left;
+              min-height: 7.7em;
+            }
+
+.block,
+.halfblock 
+            { border: 1px solid navy;
+              border-radius: 3px;
+              margin: 2px;
+              padding: .55em;
+              min-width: 10em;
+            }
+
+.halfblock 
+            { clear: both; 
+              min-height: 3.175em;
+              min-width: 20em;
+            }
+
+.party      {
+            }
+
+hr.in       { float: left;
+            }
+
+.headline   { font-family: impact;
+              font-size: 1.5em;
+              line-height: 1em;
+              color: navy;
+            }
+
+.yes, .no   { min-width: 5em;
+              text-align: center;
+            }
+            
+.click      { background-color: #e0e0f0;
+            }
+
+.first      { text-align: left;
+            }
+
+.second     { text-align: center;
+            }
+
+.third      { text-align: right;
+            }            
+
+.lettering1 { font-family: impact;
+              font-size: 2.3em;
+              color: navy;
+            }
+            
+.lettering2 { font-family: impact;
+              font-size: 1.5em;
+              color: navy;
+            }
+            
+.feature    { font-family: "Arial Black";
+              font-size: 1em;
+              color: navy;
+            }
+
+.block_smallprint
+            { width: 20%;
+            }            
+           
+.smallprint { font-family: "Arial";
+              font-size: 0.7em;
+              text-align: justify;
+            }            
+                       
+.pubkey     { font-family: "Arial";
+              font-size: 0.7em;
+            }       
+            
+.float      { float: left;
+            }     
+
+.middle     { vertical-align: middle;
+            }     
+            
+.hiviz      { color: navy;
+            }
+
+.midviz      { color: #5050a0;
+            }
+
+.loviz      { color: #c0c0e0;
+            }
