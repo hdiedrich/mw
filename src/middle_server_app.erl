@@ -22,27 +22,30 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+    %% TODO: application:ensure_all_started
+    application:start(lager),
+    %% define hosts, pathes, their patterns and handlers
+    Dispatch = cowboy_router:compile(
+                 [
+                  {'_', [
+                         {"/index.html", page_handler,
+                          {}},
+                         {"/[...]", cowboy_static,
+                          {priv_dir, middle_server, "",
+                           [{mimetypes, cow_mimetypes, all}]}
+                         }
+                        ]}
+                 ]),
 
-	% define hosts, pathes, their patterns and handlers
-	Dispatch = cowboy_router:compile([
-		{'_', [
-			{"/index.html", page_handler,
-				{}},
-			{"/[...]", cowboy_static, 
-				{priv_dir, middle_server, "", 
-			 		[{mimetypes, cow_mimetypes, all}]}
-			}
-		]}
-	]),
-	
-	% start cowboy http server
-	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
-		{env, [{dispatch, Dispatch}]},
-		{middlewares, [cowboy_router, cowboy_handler]}
-	]),
+    %% start cowboy http server
+    {ok, _} = cowboy:start_http(http, 100, [{port, 8080}],
+                                [
+                                 {env, [{dispatch, Dispatch}]},
+                                 {middlewares, [cowboy_router, cowboy_handler]}
+                                ]),
 
-	% start request-handling middleware
-	middle_server_sup:start_link().
+    %% start request-handling middleware
+    middle_server_sup:start_link().
 
 stop(_State) ->
-	ok.
+    ok.

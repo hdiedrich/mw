@@ -1,0 +1,1 @@
+-define(info(Format), lager:info(Format)).
