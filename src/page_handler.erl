@@ -27,21 +27,21 @@
 %% ----------------------------------------------------------------------------
 
 init(_Transport, _Req, _Paths) ->
-	{upgrade, protocol, cowboy_rest}.
+        {upgrade, protocol, cowboy_rest}.
 
 rest_init(Req, Paths) ->
-	{ok, Req, Paths}.
+        {ok, Req, Paths}.
 
 allowed_methods(Req, State) ->
-	{[<<"GET">>], Req, State}.
+        {[<<"GET">>], Req, State}.
 
 resource_exists(Req, State) ->
-	{true, Req, State}. 
+        {true, Req, State}. 
 
 content_types_provided(Req, State) ->
-	{[
-		{{<<"text">>, <<"html">>, []}, home_html}
-	], Req, State}.
+        {[
+                {{<<"text">>, <<"html">>, []}, home_html}
+        ], Req, State}.
 
 %% ----------------------------------------------------------------------------
 %% Page Creation
@@ -49,64 +49,64 @@ content_types_provided(Req, State) ->
 
 %% assemble index.html
 home_html(Req, _State) ->
-	Body = erlang:iolist_to_binary([
-		block("head.html"),
-		bets_html(samples()),
-		block("foot.html")]),
-	HTML = [<<"<!DOCTYPE html><html><head><title>Index</title></head>",
-		"<body>">>, Body, <<"</body></html>\n">>],
-	{HTML, Req, somepath}.
+        Body = erlang:iolist_to_binary([
+                block("head.html"),
+                bets_html(samples()),
+                block("foot.html")]),
+        HTML = [<<"<!DOCTYPE html><html><head><title>Index</title></head>",
+                "<body>">>, Body, <<"</body></html>\n">>],
+        {HTML, Req, somepath}.
 
 %% load the HTML from a template block
 block(Name) ->
-	% io:format("file path: ~p~n", [full_path(Name)]),
-	{ok, Bin} = file:read_file(full_path(Name)),
-	Bin.
+        % io:format("file path: ~p~n", [full_path(Name)]),
+        {ok, Bin} = file:read_file(full_path(Name)),
+        Bin.
 
 %% create path to the HTML templates in the app's private folder
 %% Note that this folder is under _rel and you CAN change HTML dynamically
 %% to see changes right away, if you find the right folder.
 full_path(Name) ->
-	% io:format("file dir: ~p~n", [code:priv_dir(middle_server)]),
-	filename:join([code:priv_dir(middle_server), "blocks/" ++ Name]).
+        % io:format("file dir: ~p~n", [code:priv_dir(middle_server)]),
+        filename:join([code:priv_dir(middle_server), "blocks/" ++ Name]).
 
 %% Sample data to be injected into the HTML
 samples() ->
-	[
-	 [{bet, "Germany beat Brazil"},
-	  {yes_amount, "2"},
-	  {no_amount, "3"},
-	  {yes_bidder, "Hans Langen"},
-	  {yes_pubkey, "#1dkuebmicbfviwkjnbepivavriongerjvdfkjn"},
-	  {no_bidder, "YOU?"},
-	  {no_pubkey, "--"},
-	  {smallprint, "small print"}],
-  	 [{bet, "Germany beat Brazil"},
-	  {yes_amount, "10"},
-	  {no_amount, "3"},
-	  {yes_bidder, "Hans Langen"},
-	  {yes_pubkey, "#1dkuebmicbfviwkjnbepivavriongerjvdfkjn"},
-	  {no_bidder, "YOU?"},
-	  {no_pubkey, "--"},
-	  {smallprint, "small print"}]
-  	].
+        [
+         [{bet, "Germany beat Brazil"},
+          {yes_amount, "2"},
+          {no_amount, "3"},
+          {yes_bidder, "Hans Langen"},
+          {yes_pubkey, "#1dkuebmicbfviwkjnbepivavriongerjvdfkjn"},
+          {no_bidder, "YOU?"},
+          {no_pubkey, "--"},
+          {smallprint, "small print"}],
+           [{bet, "Germany beat Brazil"},
+          {yes_amount, "10"},
+          {no_amount, "3"},
+          {yes_bidder, "Hans Langen"},
+          {yes_pubkey, "#1dkuebmicbfviwkjnbepivavriongerjvdfkjn"},
+          {no_bidder, "YOU?"},
+          {no_pubkey, "--"},
+          {smallprint, "small print"}]
+          ].
 
 %% Create HTML that displays bet offerings.
 bets_html(DataList) ->
-	Template = block("bet.html"),
-	[ bet_html(Template, Data) || Data <- DataList ].
+        Template = block("bet.html"),
+        [ bet_html(Template, Data) || Data <- DataList ].
 
 bet_html(Template, Data) ->
-	merge(Template, Data).
+        merge(Template, Data).
 
 %% Join a flat data structure and a HTML template.
 %% E.g. merge(<<"<a href=hello.html>$HELLO</a>">>, [{hello, "Hej!"}])
 %% results into <<"<a href=hello.html>Hej!</a>">>
 merge(Template, []) ->
-	Template; 
+        Template; 
 
 merge(Template, [{Tag, String} | Data]) ->
-	Search = "\\$" ++ string:to_upper(atom_to_list(Tag)),
-	Replaced = re:replace(Template, Search, String, [global, {return, list}]),
-	merge(Replaced, Data).
+        Search = "\\$" ++ string:to_upper(atom_to_list(Tag)),
+        Replaced = re:replace(Template, Search, String, [global, {return, list}]),
+        merge(Replaced, Data).
 

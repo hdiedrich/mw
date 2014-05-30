@@ -43,6 +43,22 @@ $ make run
 Content
 -------
 
+Mw runs two http servers side by side. One for API2 serving JSON. And the web server for the main site, for information about the concept and the prototypes for using it.
+
+
+### API2 JSON
+
+There are currently
+
+     http://localhost:8081/hello
+     http://localhost:8081/sample
+     http://localhost:8081/bet-list
+
+The results are JSON objects. They are created in `api_handler.erl`. The matching of the URL is hard coded in the main dispatch rule, in `middle_server.erl` and matching atoms in `api_handler:response/2`.
+
+
+### Web Site
+
 Try [http://localhost:8080/hello.html](http://localhost:8080/hello.html)
 
 This page is served from priv/hello.html as is.

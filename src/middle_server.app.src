@@ -16,15 +16,15 @@
 %%%-------------------------------------------------------------------------%%%
 
 {application, middle_server, [
-	{description, "Middle server for AIX World Cup 2104 Bitcoin Bet Scripts"},
-	{vsn, "0.1"},
-	{modules, []},
-	{registered, [middle_server_sup]},
-	{applications, [
-		kernel,
-		stdlib,
-		cowboy
-	]},
-	{mod, {middle_server_app, []}},
-	{env, []}
+        {description, "Middle server for AIX World Cup 2104 Bitcoin Bet Scripts"},
+        {vsn, "0.1"},
+        {modules, []},
+        {registered, [middle_server_sup]},
+        {applications, [
+                kernel,
+                stdlib,
+                cowboy
+        ]},
+        {mod, {middle_server_app, []}},
+        {env, []}
 ]}.
