@@ -1,8 +1,12 @@
 PROJECT = middle_server
 
-DEPS = lager cowboy
-dep_cowboy = pkg://cowboy master
+DEPS = lager cowboy epgsql poolboy jiffy
+
 dep_lager  = https://github.com/basho/lager.git
+dep_cowboy = pkg://cowboy master
+dep_epgsql  = https://github.com/epgsql/epgsql.git
+dep_poolboy = https://github.com/devinus/poolboy.git
+dep_jiffy = https://github.com/davisp/jiffy.git
 
 ERLC_OPTS = +debug_info +export_all +'{parse_transform, lager_transform}' +'{lager_truncation_size, 16384}'
 
