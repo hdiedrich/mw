@@ -1,3 +1,12 @@
+#
+# emacs
+#
+*~
+\#*\#
+
+#
+# Erlang
+#
 .cowboy.plt
 .erlang.mk.packages.*
 _rel
@@ -6,6 +15,13 @@ ebin
 logs
 relx
 test/*.beam
+.eunit
+*.o
+*.beam
+*.plt
+erl_crash.dump
 
+#
 # Mac FS
+#
 .DS_Store
