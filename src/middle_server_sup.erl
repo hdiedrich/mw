@@ -9,7 +9,6 @@
 %%% Created     : 24 May 2014                                               %%%
 %%% Changed     : 27 May 2014                                               %%%
 %%%-------------------------------------------------------------------------%%%
-
 -module(middle_server_sup).
 -behaviour(supervisor).
 
@@ -22,9 +21,9 @@
 %% API
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-        supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% supervisor start
 init([]) ->
-        Procs = [],
-        {ok, {{one_for_one, 10, 10}, Procs}}.
+    Procs = [],
+    {ok, {{one_for_one, 10, 10}, Procs}}.

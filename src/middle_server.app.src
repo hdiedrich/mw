@@ -23,6 +23,8 @@
         {applications, [
                 kernel,
                 stdlib,
+                lager,
+                crypto,
                 cowboy
         ]},
         {mod, {middle_server_app, []}},

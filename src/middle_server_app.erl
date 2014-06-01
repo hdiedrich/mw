@@ -22,6 +22,11 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+        %% TODO: extract to config file
+        application:load(lager),
+        application:set_env(lager, error_logger_hwm, 500),
+        %% TODO: application:ensure_all_started
+        application:start(lager),
 
         %% -------------------------------------------------------------------
         %% API
@@ -33,7 +38,7 @@ start(_Type, _Args) ->
                        {"/sample", api_handler, sample},
                        {"/bet-list", api_handler, 'bet-list'}]}
         ]),
-        
+
         %% start cowboy json server
         {ok, _} = cowboy:start_http(json, 100, [{port, 8081}], [
                 {env, [{dispatch, JSONDispatch}]},
@@ -43,17 +48,17 @@ start(_Type, _Args) ->
         %% -------------------------------------------------------------------
         %% Web Site
         %% -------------------------------------------------------------------
-        
+
         %% define http hosts, pathes, their patterns and handlers
         HTMLDispatch = cowboy_router:compile([
                 {'_', [
                         {"/index.html", page_handler, {}},
-                        {"/[...]", cowboy_static, 
-                                {priv_dir, middle_server, "", 
+                        {"/[...]", cowboy_static,
+                                {priv_dir, middle_server, "",
                                          [{mimetypes, cow_mimetypes, all}]}}
                 ]}
         ]),
-        
+
         %% start cowboy http server
         {ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
                 {env, [{dispatch, HTMLDispatch}]},
