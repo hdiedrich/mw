@@ -21,6 +21,8 @@
 %% Callback Callbacks
 -export([response/2]).
 
+-include("log.hrl").
+
 %% ----------------------------------------------------------------------------
 %% Cowboy Callbacks
 %% ----------------------------------------------------------------------------
@@ -60,11 +62,46 @@ response(Req, sample=State) ->
 response(Req, 'bet-list'=State) ->
     io:format("Req: ~p~n~n State:~p~n~n", [Req, State]),
     JSON = json([{'bet-list', sample2()}]),
+    {JSON, Req, State};
+
+response(Req, 'enter-contract'=State) ->
+    HandleFun =
+        fun() ->
+                ?info("Req: ~p State:~p", [Req, State]),
+                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                ContractId = erlang:list_to_integer(binary:bin_to_list(ContractId0)),
+                {ok, Body, _Req1} = cowboy_req:body(Req),
+                {[{<<"pubkey">>, PubKey}]} = jiffy:decode(Body),
+                Response = mw_contract:enter_contract(ContractId, PubKey),
+                ?info("Respone: ~p", [Response]),
+                Response
+        end,
+    JSON = handle_response(HandleFun),
+    ?info("Respone JSON: ~p", [JSON]),
     {JSON, Req, State}.
+
+%% Single, top-level try catch to ensure we return correct JSON error code / msg
+%% for all handled errors, with a default for any unhandled error (crash).
+%% This allows code deeper in the stack to be written in idiomatic Erlang style
+%% for the correct case, without defensive coding.
+handle_response(HandleFun) ->
+    try
+        json(HandleFun())
+    catch throw:{api_error, {ErrorCode, ErrorMsg}} ->
+            ?error("Handled API Error Code: ~p : ~p", [ErrorCode, ErrorMsg]),
+            json([{"error-code", ErrorCode}, {"error-message", ErrorMsg}]);
+          Error:Reason ->
+            Stack = erlang:get_stacktrace(),
+            ?error("Unhandled Error: ~p Reason: ~p Stack: ~p",
+                   [Error, Reason, Stack]),
+            json([{"error-code", 0},
+                  {"error-message", "Unknown Error. "
+                   "Something is on fire. Don't panic."}])
+    end.
 
 %% ---------------------------------------------------------------------------
 %% Sample data to be injected into the HTML
-%% ---------------------------------------------------------------------------
+%% -----------------------------------------------------------------------
 sample1() ->
     [[{ a, 1 }, { b, <<"b">> }, { c, c }]].
 

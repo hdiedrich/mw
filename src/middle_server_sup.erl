@@ -18,6 +18,9 @@
 %% supervisor
 -export([init/1]).
 
+%% Helper macro for declaring children of supervisor
+-define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+
 %% API
 -spec start_link() -> {ok, pid()}.
 start_link() ->
@@ -25,5 +28,7 @@ start_link() ->
 
 %% supervisor start
 init([]) ->
-    Procs = [],
+    Procs = [
+             ?CHILD(mw_pg_sup, supervisor)
+            ],
     {ok, {{one_for_one, 10, 10}, Procs}}.

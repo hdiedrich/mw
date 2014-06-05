@@ -25,7 +25,10 @@
                 stdlib,
                 lager,
                 crypto,
-                cowboy
+                cowboy,
+                poolboy,
+                epgsql,
+                jiffy
         ]},
         {mod, {middle_server_app, []}},
         {env, []}

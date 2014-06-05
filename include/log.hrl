@@ -1,2 +1,6 @@
 -define(info(Format), lager:info(Format)).
 -define(info(Format, Data), lager:info(Format, Data)).
+-define(warning(Format), lager:warning(Format)).
+-define(warning(Format, Data), lager:warning(Format, Data)).
+-define(error(Format), lager:error(Format)).
+-define(error(Format, Data), lager:error(Format, Data)).

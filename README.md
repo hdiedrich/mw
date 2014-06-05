@@ -1,16 +1,16 @@
 AIX World Cup 2014 Middle Ware
 ==============================
 
-The AIX WC14 concept enables football bets on the Bitcoin blockchain that are decentralized, oracle-driven contacts, requiring less trust.  
+The AIX WC14 concept enables football bets on the Bitcoin blockchain that are decentralized, oracle-driven contacts, requiring less trust.
 
-     Description : Mw - AI Effect World Cup 2014 - Middle Server             
-     Version     : 0.1.x/initial spike                                       
+     Description : Mw - AI Effect World Cup 2014 - Middle Server
+     Version     : 0.1.x/initial spike
      File        : README.md
-     Copyright   : AI Effect Group, Berlin                                   
-     Author      : H. Diedrich <hd2010@eonblast.com>                         
-     License     : MIT                                                       
-     Created     : 24 May 2014                                               
-     Changed     : 29 May 2014                                               
+     Copyright   : AI Effect Group, Berlin
+     Author      : H. Diedrich <hd2010@eonblast.com>
+     License     : MIT
+     Created     : 24 May 2014
+     Changed     : 29 May 2014
 
 Status
 ------
@@ -24,6 +24,33 @@ Requirements
 * relx
 * make
 * git
+
+PostgreSQL config
+-----------
+
+This is currently in middle_server_app in lieu of being extracted to a config file:
+
+``` erlang
+ application:set_env(mw, pools,
+                        [
+                         {pgsql_pool, [{size, 1}, {max_overflow, 1}],
+                          [
+                           {host, "localhost"},
+                           {dbname, "mw_alpha"},
+                           {user, "mw"},
+                           {pass, "mw"}
+                          ]}
+                        ]),
+```
+
+PostgreSQL bootstrap
+-----------
+As a user with rights to modify the database (this could be postgres user):
+
+``` bash
+psql mw_alpha < priv/postgres/mw_db_drop_all
+psql mw_alpha < priv/postgres/mw_db_init
+```
 
 Build & Run
 -----------
@@ -56,6 +83,12 @@ There are currently
 
 The results are JSON objects. They are created in `api_handler.erl`. The matching of the URL is hard coded in the main dispatch rule, in `middle_server.erl` and matching atoms in `api_handler:response/2`.
 
+enter-contract curl request:
+
+``` bash
+curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"pubkey":"0457a6e187af6dcad28f678a92850610504aa64685b4d6f60cbc30c1a1407a0ce03df1d51102eb09aca7ca6df77c06fe3ef6054e2ee9dac7b5ac849f6e5c026b73"}'  http://localhost:8081/enter-contract/42
+```
+
 
 ### Web Site
 
@@ -64,7 +97,7 @@ Try [http://localhost:8080/hello.html](http://localhost:8080/hello.html)
 This page is served from priv/hello.html as is.
 
 
-A sample of where we want to go is served as static page from 
+A sample of where we want to go is served as static page from
 [http://localhost:8080/sample.html](http://localhost:8080/sample.html)
 
 
@@ -72,7 +105,7 @@ Check out [http://localhost:8080/index.html](http://localhost:8080/index.html)
 
 This is the most meaningful example page served at this point. Is assembled from the template blocks in the `priv` folder: `head.html`, `foot.html`, `bet.html`. Note that the `priv` folder is copied into the release. You can change pages dynamically by changing these files but they are NOT the ones in the priv folder in this folder. They are somewhere under `_rel/`. When you change these, you can immediately reload in the browser.
 
-`bet.html` is interesting as it contains uppercase, $-affixed placeholders for actual values. The actual creation of the html to be served is done in `src/page_handler.erl`. 
+`bet.html` is interesting as it contains uppercase, $-affixed placeholders for actual values. The actual creation of the html to be served is done in `src/page_handler.erl`.
 
 The data injected into `bet.html` looks like this and is currently hardcoded. Note the atoms are being uppercased and $-affixed and matched against said placeholders in `bet.html`.
 
