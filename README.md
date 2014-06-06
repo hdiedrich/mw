@@ -4,18 +4,18 @@ AIX World Cup 2014 Middle Ware
 The AIX WC14 concept enables football bets on the Bitcoin blockchain that are decentralized, oracle-driven contacts, requiring less trust.
 
      Description : Mw - AI Effect World Cup 2014 - Middle Server
-     Version     : 0.1.x/initial spike
+     Version     : 0.3.x/JS stuff
      File        : README.md
      Copyright   : AI Effect Group, Berlin
      Author      : H. Diedrich <hd2010@eonblast.com>
      License     : MIT
      Created     : 24 May 2014
-     Changed     : 29 May 2014
+     Changed     : 06 June 2014
 
 Status
 ------
 
-This is a first spike relating the middle ware, a minmal cowboy setup serving static pages in `priv/` and assembling dynamic pages from flat data structures and templates in `priv/blocks/`.
+This is the first complete 'Mw' stack of Cowboy, PostgreSQL and BitcoinJS. It has a minmal cowboy setup serving static pages in `priv/` and assembling dynamic pages from flat data structures and templates in `priv/blocks/`. PostgreSQL I don't know what it's doing at this point but it runs with the server down, which is good. And BitcoinJS is featured in the old de facto standard 0.1.3, with but a hello-js.html available as template at this point.
 
 Requirements
 ------------
@@ -26,7 +26,7 @@ Requirements
 * git
 
 PostgreSQL config
------------
+-----------------
 
 This is currently in middle_server_app in lieu of being extracted to a config file:
 
@@ -44,7 +44,7 @@ This is currently in middle_server_app in lieu of being extracted to a config fi
 ```
 
 PostgreSQL bootstrap
------------
+--------------------
 As a user with rights to modify the database (this could be postgres user):
 
 ``` bash
@@ -52,10 +52,10 @@ psql mw_alpha < priv/postgres/mw_db_drop_all
 psql mw_alpha < priv/postgres/mw_db_init
 ```
 
-Build & Run
------------
+Build & Run the Mw Stack
+------------------------
 
-To build, run the following command:
+To build this stack, run the following command:
 
 ``` bash
 $ make
@@ -67,10 +67,13 @@ To start the server in the foreground:
 $ make run
 ```
 
+If you don't have a PostgreSQL server running it will crash partially but still
+serve pages.
+
 Content
 -------
 
-Mw runs two http servers side by side. One for API2 serving JSON. And the web server for the main site, for information about the concept and the prototypes for using it.
+Mw runs two http servers side by side. One for API2 serving JSON. And the web server for the main site, for information about the concept, and the functional prototype, including JS scripts.
 
 
 ### API2 JSON
@@ -124,4 +127,14 @@ E.g. `<<"<a href=hello.html>$HELLO</a>">>, [{hello, "Hej!"}])` results into `<<"
 
 The page `index.html` is kind of special cased with its own handler currently. The name is matched in full to chose the right handler. There is no inspection of parameters of a GET currently.
 
-Both sample.html and index.html use the stylesheet in `priv/style.css`. It is served as static file.
+Both sample.html and index.html use the stylesheet in `priv/style.css`. It is served as static file.i
+
+
+### BitcoinJS
+
+Test BitcoinJS with [http://localhost:8080/hello-js.html](http://localhost:8080/hello-js.html)
+
+This will give you a page with basic BitcoinJS operations like key creation,
+hasing and signing.
+
+

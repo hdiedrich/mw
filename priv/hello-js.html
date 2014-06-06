@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BitcoinJS-lib 0.1.3 Hello World</title>
+
+  <script type="text/javascript" src="bitcoinjs/crypto-js/crypto.js"></script>
+  <script type="text/javascript" src="bitcoinjs/crypto-js/sha256.js"></script>
+  <script type="text/javascript" src="bitcoinjs/jsbn/prng4.js"></script>
+  <script type="text/javascript" src="bitcoinjs/jsbn/rng.js"></script>
+  <script type="text/javascript" src="bitcoinjs/jsbn/jsbn.js"></script>
+  <script type="text/javascript" src="bitcoinjs/jsbn/jsbn2.js"></script>
+
+  <script type="text/javascript" src="bitcoinjs/jsbn/ec.js"></script>
+  <script type="text/javascript" src="bitcoinjs/jsbn/sec.js"></script>
+  <script type="text/javascript" src="bitcoinjs/events/eventemitter.js"></script>
+  <script type="text/javascript" src="bitcoinjs/bitcoin.js"></script>
+  <script type="text/javascript" src="bitcoinjs/util.js"></script>
+  <script type="text/javascript" src="bitcoinjs/base58.js"></script>
+
+  <script type="text/javascript" src="bitcoinjs/address.js"></script>
+  <script type="text/javascript" src="bitcoinjs/ecdsa.js"></script>
+  <script type="text/javascript" src="bitcoinjs/eckey.js"></script>
+  <script type="text/javascript" src="bitcoinjs/paillier.js"></script>
+
+</head>
+<body>
+  <h3>BitcoinJS-lib 0.1.3 Hello World</h3>
+  <p>This is a minimal BitcoinJS-lib 0.1.3 page</p>
+  <p id=ok><font color=red>[An ok text should appear here.]</font></p>
+
+  <hr>
+  <p>Check JS console for errors.</p>
+  <p>Note for Chrome: for localhost, you need to start with --allow-file-access-from-files. E.g. for Mac: $ open /Applications/Google\ Chrome.app/ --args --disable-web-security --allow-file-access-from-files</p>
+  
+
+  <script>
+  
+    // Test scripts with basic signing functions
+    // -----------------------------------------
+
+    // init    
+    console.log(ok = "init.");
+    var ecparams = getSECCurveByName("secp256k1");
+    var rng = new SecureRandom();
+  
+    // create an ecliptic key pair, get its pub part
+    console.log(ok = "create an ecliptic key pair, get its pub part.");
+    var s1 = new Bitcoin.ECKey();
+    var p1 = s1.getPub();
+    
+    // make a signature of a zero, verify it
+    console.log(ok = "make a signature of a zero, verify it.");
+    var sig_a = s1.sign(BigInteger.ZERO);
+    s1.verify(BigInteger.ZERO, sig_a);
+    
+    // make a signature of a hash of a document
+    console.log(ok = "make a signature of a hash of a document,");
+    var message = new BigInteger(1024, rng).toByteArrayUnsigned();
+    var hash = Crypto.SHA256(message, {asBytes: true});
+    var sig_b = s1.sign(hash);
+    
+    // verify it
+    console.log(ok = "verify it.");
+    s1.verify(hash, sig_b);
+  
+    // verify signature from hex strings
+    console.log(ok = "verify signature from hex strings.");
+    var message2 = Crypto.util.hexToBytes(
+      "12dce2c169986b3346827ffb2305cf393984627f5f9722a1b1368e933c8d" +
+      "d296653fbe5d7ac031c4962ad0eb1c4298c3b91d244e1116b4a76a130c13" +
+      "1e7aec7fa70184a71a2e66797052831511b93c6e8d72ae58a1980eaacb66" +
+      "8a33f50d7cefb96a5dab897b5efcb99cbafb0d777cb83fc9b2115b69c0fa" +
+      "3d82507b932b84e4"
+    );
+    var hash2 = Crypto.SHA256(message2, {asBytes: true});
+
+    var sig_c = Crypto.util.hexToBytes(
+      "3044022038d9b8dd5c9fbf330565c1f51d72a59ba869aeb2c2001be959d3" +
+      "79e861ec71960220a73945f32cf90d03127d2c3410d16cee120fa1a4b4c3" +
+      "f273ab082801a95506c4"
+    );
+
+    var s2 = Crypto.util.hexToBytes(
+      "045a1594316e433fb91f35ef4874610d22177c3f1a1060f6c1e70a609d51" +
+      "b20be5795cd2a5eae0d6b872ba42db95e9afaeea3fbb89e98099575b6828" +
+      "609a978528"
+    );
+    Bitcoin.ECDSA.verify(hash2, sig_c, s2);
+  
+    // Print an ok to screen and JS console.
+    console.log(ok = "seems to work.");
+    var oktag = document.getElementById("ok");
+    if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
+
+  </script>
+</body>
+</html>
