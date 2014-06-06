@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.1.x/initial spike                                       %%%
+%%% Version     : 0.3.x/web flow                                            %%%
 %%% File        : middle_server_app.erl                                     %%%
 %%% Description : main module, starting the Cowboy host                     %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 29 May 2014                                               %%%
+%%% Changed     : 06 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 %%%                                                                         %%%
 %%%  The AIX WC14 concept enables football bets on the Bitcoin blockchain   %%%
@@ -72,7 +72,20 @@ start(_Type, _Args) ->
     HTMLDispatch = cowboy_router:compile(
                      [
                       {'_', [
-                             {"/index.html", page_handler, {}},
+                             {"/index.html",    page_handler, {index}},
+                             {"/about.html",    page_handler, {about}},
+                             {"/intro.html",    page_handler, {intro}},
+                             {"/bets.html",     page_handler, {bets}},
+                             {"/bet.html",      page_handler, {bet}},
+                             {"/flow.html",     page_handler, {flow}},
+                             {"/prep.html",     page_handler, {prep}},
+                             {"/pend.html",     page_handler, {pend}},
+                             {"/sign.html",     page_handler, {sign}},
+                             {"/followup.html", page_handler, {followup}},
+                             {"/status.html",   page_handler, {status}},
+                             {"/events.html",   page_handler, {events}},
+                             {"/cashout.html",  page_handler, {cashout}},
+                             {"/wrapup.html",   page_handler, {wrapup}},
                              {"/[...]", cowboy_static,
                               {priv_dir, middle_server, "",
                                [{mimetypes, cow_mimetypes, all}]}}

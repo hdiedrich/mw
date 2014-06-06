@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.1.x/initial spike                                       %%%
+%%% Version     : 0.3.x/web flow                                            %%%
 %%% File        : page_handler.erl                                          %%%
 %%% Description : web site page creation, as a handler for Cowboy           %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 27 May 2014                                               %%%
+%%% Changed     : 06 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -19,7 +19,7 @@
 -export([content_types_provided/2]).
 
 %% Callback Callbacks
--export([home_html/2]).
+-export([page/2]).
 
 %% ----------------------------------------------------------------------------
 %% Cowboy Callbacks
@@ -38,21 +38,81 @@ resource_exists(Req, State) ->
 
 content_types_provided(Req, State) ->
     {[
-      {{<<"text">>, <<"html">>, []}, home_html}
+      {{<<"text">>, <<"html">>, []}, page}
      ], Req, State}.
 
 %% ----------------------------------------------------------------------------
 %% Page Creation
 %% ----------------------------------------------------------------------------
 %% assemble index.html
-home_html(Req, _State) ->
+page(Req, State) ->
     Body = erlang:iolist_to_binary([
                                     block("head.html"),
-                                    bets_html(samples()),
+                                    html(State),
                                     block("foot.html")]),
     HTML = [<<"<!DOCTYPE html><html><head><title>Index</title></head>",
               "<body>">>, Body, <<"</body></html>\n">>],
-    {HTML, Req, somepath}.
+    {HTML, Req, somepath}. %% TODO somepath?
+
+html({index}) ->
+    bets_html(samples());
+
+html({about}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({intro}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({bets}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({bet}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({flow}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({prep}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({pend}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({sign}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({followup}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({status}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({cashout}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html({wrapup}=State) ->
+    placeholder(io_lib:format("~p", [State]));
+
+html(State) ->
+    placeholder(io_lib:format("~p ?", [State])).
+
+
+%% ----------------------------------------------------------------------------
+%% Bets Lists
+%% ----------------------------------------------------------------------------
+
+%% Create HTML that displays bet offerings.
+bets_html(DataList) ->
+    Template = block("bet.html"),
+    [ bet_html(Template, Data) || Data <- DataList ].
+
+bet_html(Template, Data) ->
+    merge(Template, Data).
+
+
+%% ----------------------------------------------------------------------------
+%% Dynamic Pages
+%% ----------------------------------------------------------------------------
 
 %% load the HTML from a template block
 block(Name) ->
@@ -88,14 +148,6 @@ samples() ->
       {smallprint, "small print"}]
     ].
 
-%% Create HTML that displays bet offerings.
-bets_html(DataList) ->
-    Template = block("bet.html"),
-    [ bet_html(Template, Data) || Data <- DataList ].
-
-bet_html(Template, Data) ->
-    merge(Template, Data).
-
 %% Join a flat data structure and a HTML template.
 %% E.g. merge(<<"<a href=hello.html>$HELLO</a>">>, [{hello, "Hej!"}])
 %% results into <<"<a href=hello.html>Hej!</a>">>
@@ -106,3 +158,7 @@ merge(Template, [{Tag, String} | Data]) ->
     Search = "\\$" ++ string:to_upper(atom_to_list(Tag)),
     Replaced = re:replace(Template, Search, String, [global, {return, list}]),
     merge(Replaced, Data).
+
+%% Placeholder for pages under construction
+placeholder(S) ->
+    "<h3>" ++ S ++ "</h3>".
