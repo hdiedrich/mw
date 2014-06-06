@@ -24,6 +24,11 @@
 -include("mw_api_errors.hrl").
 
 %%%===========================================================================
+%%% Test keys
+%%%===========================================================================
+-define(TEST_EVENT_EC_KEY1, <<"CAFEBABE">>).
+
+%%%===========================================================================
 %%% JSON API handlers (called from cowboy callbacks)
 %%%===========================================================================
 %% Validations throw error so JSON handler can return nice error code / msg
@@ -47,19 +52,34 @@ create_contract(EventId) ->
     ok = mw_pg:insert_contract(EventId),
     todo.
 
-create_event() ->    
-    todo.
+create_event() ->
+    %% TODO: make oracle_key id dynamic
+    {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(1),
+    {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
+    {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
+    EventPrivKeyEnvWithOracleNoKey =
+        public_key:encrypt_public(?TEST_EVENT_EC_KEY1, NoPubKey),
+    EventPrivKeyEnvWithOracleYesKey =
+        public_key:encrypt_public(?TEST_EVENT_EC_KEY1, YesPubKey),
+    ok = mw_pg:insert_event(1, "Foo Event", "Bar desc", 1, ?TEST_EVENT_EC_KEY1,
+                            EventPrivKeyEnvWithOracleNoKey,
+                            EventPrivKeyEnvWithOracleYesKey),
+    ok.
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
 do_enter_contract(ContractId, PubKey) ->
     [{"todo", "todo_stuff"}].
 
-
 api_validation(false, {ErrorCode, ErrorMsg}) ->
     throw({api_error, {ErrorCode, ErrorMsg}});
 api_validation(true, _) ->
     continue.
+
+pem_decode_bin(Bin) ->
+    [Entry] = public_key:pem_decode(Bin),
+    Key = public_key:pem_entry_decode(Entry),
+    {ok, Key}.
 
 %%%===========================================================================
 %%% Dev / Debug / Manual Tests
