@@ -17,7 +17,7 @@
 %%%===========================================================================
 %%% API
 %%%===========================================================================
-get_contract(ContractId) ->
+select_contract(Id) ->
     Statement =
         "SELECT c.id"
         "FROM contracts c "
@@ -26,10 +26,10 @@ get_contract(ContractId) ->
     Res =
         mw_pg_lib:parse_select_result(
           mw_pg_lib:equery(Statement,
-                              [mw_pg_lib:ensure_epgsql_type(ContractId)])),
+                              [mw_pg_lib:ensure_epgsql_type(Id)])),
     case Res of
-        {ok, [[{<<"id">>, Id}]]} -> {ok, Id};
-        Other                    -> {error, Other}
+        {ok, [[{<<"id">>, Id2}]]} -> {ok, Id2};
+        Other                     -> {error, Other}
     end.
 
 insert_contract(EventId) ->
@@ -41,6 +41,32 @@ insert_contract(EventId) ->
           mw_pg_lib:equery(Statement,
                            [mw_pg_lib:ensure_epgsql_type(EventId)])),
     ok.
+
+select_oracle_keys(Id) ->
+    Statement =
+        "SELECT ok.no_pubkey, ok.yes_pubkey "
+        "FROM oracle_keys ok "
+        "WHERE ok.id = $1",
+    Res =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement,
+                              [mw_pg_lib:ensure_epgsql_type(Id)])),
+    case Res of
+        {ok, [[{<<"no_pubkey">>, NOPubKey}]]} -> {ok, {NOPubKey}};
+        Other -> {error, Other}
+    end.    
+
+insert_oracle_keys(NOPubKey, YESPubKey) ->
+    Statement =
+        "INSERT INTO oracle_keys (no_pubkey, yes_pubkey) "
+        "VALUES ($1, $2);",
+    {ok, _} =
+        mw_pg_lib:parse_insert_result(
+          mw_pg_lib:equery(Statement,
+                           [mw_pg_lib:ensure_epgsql_type(NOPubKey),
+                            mw_pg_lib:ensure_epgsql_type(YESPubKey)])),
+    ok.
+
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
