@@ -71,8 +71,9 @@ response(Req, 'enter-contract'=State) ->
                 {ContractId0, _} = cowboy_req:binding('contract-id', Req),
                 ContractId = erlang:list_to_integer(binary:bin_to_list(ContractId0)),
                 {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"pubkey">>, PubKey}]} = jiffy:decode(Body),
-                Response = mw_contract:enter_contract(ContractId, PubKey),
+                {[{<<"ec_pubkey">>, ECPubKey},
+                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(Body),
+                Response = mw_contract:enter_contract(ContractId, ECPubKey, RSAPubKey),
                 ?info("Respone: ~p", [Response]),
                 Response
         end,

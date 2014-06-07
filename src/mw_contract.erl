@@ -23,6 +23,8 @@
 -include("log.hrl").
 -include("mw_api_errors.hrl").
 
+-define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
+
 %%%===========================================================================
 %%% Testnet keys for tests / dev / debug
 %%%===========================================================================
@@ -40,17 +42,21 @@
 %%%===========================================================================
 %% Validations throw error so JSON handler can return nice error code / msg
 %% Any unhandled error (crash) will return default json error code / msg
-enter_contract(ContractId, PubKey) ->
-    ?info("Handling enter_contract with ContractId: ~p , PubKey: ~p",
-          [ContractId, PubKey]),
+enter_contract(ContractId, ECPubKey, RSAPubKey) ->
+    ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p",
+          [ContractId, ECPubKey]),
     api_validation(is_integer(ContractId), ?API_ERROR_CONTRACT_ID_TYPE),
-    api_validation(is_binary(PubKey), ?API_ERROR_PUBKEY_TYPE),
+    api_validation(is_binary(ECPubKey), ?API_ERROR_PUBKEY_TYPE),
     %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
     %% always 65 bytes == 130 hex digits
-    api_validation((byte_size(PubKey) == 130), ?API_ERROR_PUBKEY_LEN),
+    api_validation((byte_size(ECPubKey) == 130), ?API_ERROR_EC_PUBKEY_LEN),
 
-    %% ok = do_enter_contract(ContractId, PubKey),
-    [{"success-message", "ok_todo"}].
+    api_validation(is_binary(RSAPubKey), ?API_ERROR_PUBKEY_TYPE),
+    %?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    api_validation((byte_size(RSAPubKey) == 902), ?API_ERROR_RSA_PUBKEY_LEN),
+
+    ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
+    [{"success-message", "ok"}].
 
 %%%===========================================================================
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
@@ -60,28 +66,24 @@ create_contract(EventId) ->
     ok = mw_pg:insert_contract(EventId),
     ok.
 
-create_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey) ->
-    {ok, OracleNOPubKey, OracleYESPubKey} = mw_pg:select_oracle_keys(OracleKeysId),
+create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
+    %% Validations for EC keys
+    %api_validation(is_binary(NOPubKey), ?API_ERROR_PUBKEY_TYPE),
+    %api_validation(is_binary(YESPubKey), ?API_ERROR_PUBKEY_TYPE),
+    %api_validation((byte_size(NOPubKey) == 130), ?API_ERROR_PUBKEY_LEN),
+    %api_validation((byte_size(YESPubKey) == 130), ?API_ERROR_PUBKEY_LEN),
+    ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
-create_oracle_keys(NOPubKey, YESPubKey) ->
-    api_validation(is_binary(NOPubKey), ?API_ERROR_PUBKEY_TYPE),
-    api_validation(is_binary(YESPubKey), ?API_ERROR_PUBKEY_TYPE),
-    api_validation((byte_size(NOPubKey) == 130), ?API_ERROR_PUBKEY_LEN),
-    api_validation((byte_size(YESPubKey) == 130), ?API_ERROR_PUBKEY_LEN),
-    ok = mw_pg:insert_oracle_keys(NOPubKey, YESPubKey),
-    ok.
-
-create_event() ->
-    %% TODO: make oracle_key id dynamic
-    {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(1),
+create_event(MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) ->
+    {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
     {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
     {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
     EventPrivKeyEnvWithOracleNoKey =
-        public_key:encrypt_public(?TEST_EC_EVENT_PRIVKEY, NoPubKey),
+        public_key:encrypt_public(EventPrivKey, NoPubKey),
     EventPrivKeyEnvWithOracleYesKey =
-        public_key:encrypt_public(?TEST_EC_EVENT_PRIVKEY, YesPubKey),
-    ok = mw_pg:insert_event(1, "Foo Event", "Bar desc", 1, ?TEST_EC_EVENT_PRIVKEY,
+        public_key:encrypt_public(EventPrivKey, YesPubKey),
+    ok = mw_pg:insert_event(1, Headline, Desc, OracleKeysId, EventPubKey,
                             EventPrivKeyEnvWithOracleNoKey,
                             EventPrivKeyEnvWithOracleYesKey),
     ok.
@@ -89,8 +91,30 @@ create_event() ->
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
-do_enter_contract(ContractId, PubKey) ->
-    [{"todo", "todo_stuff"}].
+%% TODO: think about abstraction concerns regarding matching on postgres 'null'
+%% TODO: this assumes giver always enters first
+%% TODO: generalize
+do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
+    {ok, RSAPubKey} = pem_decode_bin(mw_lib:hex_to_bin(RSAPubKeyHex)),
+    case mw_pg:select_contract(ContractId) of
+        {ok, null, null} ->
+            {ok, EncEventKey} =
+                mw_pg:select_enc_event_privkey(ContractId, yes),
+            ?info("keys ~p", [{EncEventKey, RSAPubKey}]),
+            DoubleEncEventKey =
+                public_key:encrypt_public(EncEventKey, RSAPubKey),
+            ok = mw_pg:update_contract(ContractId, giver,
+                                       ECPubKey, RSAPubKey, DoubleEncEventKey),
+            ok;
+        {ok, GiverECPubKey, null} ->
+            {ok, EncEventKey} =
+                mw_pg:select_enc_event_privkey(ContractId, no),
+            DoubleEncEventKey =
+                public_key:encrypt_public(EncEventKey, RSAPubKey),
+            ok = mw_pg:update_contract(ContractId, taker,
+                                       ECPubKey, RSAPubKey, DoubleEncEventKey),
+            ok
+    end.
 
 api_validation(false, {ErrorCode, ErrorMsg}) ->
     throw({api_error, {ErrorCode, ErrorMsg}});
@@ -102,12 +126,33 @@ pem_decode_bin(Bin) ->
     Key = public_key:pem_entry_decode(Entry),
     {ok, Key}.
 
+rsa_key_from_file(PrivPath) ->
+    AbsPath = filename:join(code:priv_dir(middle_server), PrivPath),
+    {ok, Bin} = file:read_file(AbsPath),
+    %{ok, Key} = pem_decode_bin(Bin),
+    Bin.
+
+hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
+    AESKey = crypto:strong_rand_bytes(128),
+    Ciphertext = crypto:block_encrypt(aes_cbc128, AESKey,
+                                      ?DEFAULT_AES_IV, Plaintext),
+    EncAESKey = public_key:encrypt_public(AESKey, RSAPubKey),
+    <<EncAESKey:256/bytes, Ciphertext/binary>>.
+
 %%%===========================================================================
 %%% Dev / Debug / Manual Tests
 %%%===========================================================================
 %% mw_contract:manual_test_1().
 manual_test_1() ->
-    ok = create_oracle_keys(?TEST_EC_ORACLE_NO_PUBKEY, ?TEST_EC_ORACLE_YES_PUBKEY),
-    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1, ?TEST_EC_EVENT_PUBKEY),
-    %% create_contract(1),
+    ok = create_oracle_keys(rsa_key_from_file("test_keys/oracle_no_pubkey.pem"),
+                            rsa_key_from_file("test_keys/oracle_no_privkey.pem"),
+                            rsa_key_from_file("test_keys/oracle_yes_pubkey.pem"),
+                            rsa_key_from_file("test_keys/oracle_yes_privkey.pem")),
+    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1,
+                      ?TEST_EC_EVENT_PRIVKEY,
+                      ?TEST_EC_EVENT_PUBKEY),
+    ok.
+
+manual_test_2() ->
+    create_contract(1),
     ok.
