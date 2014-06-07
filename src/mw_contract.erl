@@ -26,14 +26,14 @@
 %%%===========================================================================
 %%% Testnet keys for tests / dev / debug
 %%%===========================================================================
--define(TEST_EVENT_PRIVKEY, <<"16C746A92F7584013A93004BE8A56709C8CFE0B71E8DEA6DEFC6BE0F7D9CB96C">>).
--define(TEST_EVENT_PUBKEY, <<"025A70A221894F315EBC864292D0DB9F7FF0F817C6D489D176E02BAA7FD4FCE320">>).
+-define(TEST_EC_EVENT_PRIVKEY, <<"16C746A92F7584013A93004BE8A56709C8CFE0B71E8DEA6DEFC6BE0F7D9CB96C">>).
+-define(TEST_EC_EVENT_PUBKEY, <<"025A70A221894F315EBC864292D0DB9F7FF0F817C6D489D176E02BAA7FD4FCE320">>).
 
--define(TEST_ORACLE_NO_PRIVKEY, <<"7498560BFC3C501C6386A5EA936B548629E37A3E24C88C4FE29E969C83D8CC57">>).
--define(TEST_ORACLE_NO_PUBKEY, <<"039A7D381E13BA745BCA7BE5456E4076A63CA3B54FCB1B2CF7BD8ACA3DACBD06E3">>).
+-define(TEST_EC_ORACLE_NO_PRIVKEY, <<"7498560BFC3C501C6386A5EA936B548629E37A3E24C88C4FE29E969C83D8CC57">>).
+-define(TEST_EC_ORACLE_NO_PUBKEY, <<"039A7D381E13BA745BCA7BE5456E4076A63CA3B54FCB1B2CF7BD8ACA3DACBD06E3">>).
 
--define(TEST_ORACLE_YES_PRIVKEY, <<"CC74044B7931A452D7039DFE2C9985393843B724DB6251B54DC743E490E7C51C">>).
--define(TEST_ORACLE_YES_PUBKEY, <<"03DC052964F0BCA73CCA109B74CD8F7D2F82C4664AAC142D491DE8B4CC6D244492">>).
+-define(TEST_EC_ORACLE_YES_PRIVKEY, <<"CC74044B7931A452D7039DFE2C9985393843B724DB6251B54DC743E490E7C51C">>).
+-define(TEST_EC_ORACLE_YES_PUBKEY, <<"03DC052964F0BCA73CCA109B74CD8F7D2F82C4664AAC142D491DE8B4CC6D244492">>).
 
 %%%===========================================================================
 %%% JSON API handlers (called from cowboy callbacks)
@@ -72,24 +72,42 @@ create_oracle_keys(NOPubKey, YESPubKey) ->
     ok = mw_pg:insert_oracle_keys(NOPubKey, YESPubKey),
     ok.
 
+create_event() ->
+    %% TODO: make oracle_key id dynamic
+    {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(1),
+    {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
+    {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
+    EventPrivKeyEnvWithOracleNoKey =
+        public_key:encrypt_public(?TEST_EC_EVENT_PRIVKEY, NoPubKey),
+    EventPrivKeyEnvWithOracleYesKey =
+        public_key:encrypt_public(?TEST_EC_EVENT_PRIVKEY, YesPubKey),
+    ok = mw_pg:insert_event(1, "Foo Event", "Bar desc", 1, ?TEST_EC_EVENT_PRIVKEY,
+                            EventPrivKeyEnvWithOracleNoKey,
+                            EventPrivKeyEnvWithOracleYesKey),
+    ok.
+
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
 do_enter_contract(ContractId, PubKey) ->
     [{"todo", "todo_stuff"}].
 
-
 api_validation(false, {ErrorCode, ErrorMsg}) ->
     throw({api_error, {ErrorCode, ErrorMsg}});
 api_validation(true, _) ->
     continue.
+
+pem_decode_bin(Bin) ->
+    [Entry] = public_key:pem_decode(Bin),
+    Key = public_key:pem_entry_decode(Entry),
+    {ok, Key}.
 
 %%%===========================================================================
 %%% Dev / Debug / Manual Tests
 %%%===========================================================================
 %% mw_contract:manual_test_1().
 manual_test_1() ->
-    ok = create_oracle_keys(?TEST_ORACLE_NO_PUBKEY, ?TEST_ORACLE_YES_PUBKEY),
-    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1, ?TEST_EVENT_PUBKEY),
+    ok = create_oracle_keys(?TEST_EC_ORACLE_NO_PUBKEY, ?TEST_EC_ORACLE_YES_PUBKEY),
+    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1, ?TEST_EC_EVENT_PUBKEY),
     %% create_contract(1),
     ok.
