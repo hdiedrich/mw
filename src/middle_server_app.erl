@@ -7,11 +7,11 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 06 June 2014                                              %%%
+%%% Changed     : 08 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 %%%                                                                         %%%
 %%%  The AIX WC14 concept enables football bets on the Bitcoin blockchain   %%%
-%%%  that are decentralized, oracle-driven contacts, requiring less trust.  %%%
+%%%  that are decentralized, oracle-driven contracts, requiring less trust. %%%
 %%%                                                                         %%%
 %%%-------------------------------------------------------------------------%%%
 
@@ -76,7 +76,7 @@ start(_Type, _Args) ->
                              {"/about.html",    page_handler, {about}},
                              {"/intro.html",    page_handler, {intro}},
                              {"/bets.html",     page_handler, {bets}},
-                             {"/bet.html",      page_handler, {bet}},
+                             {"/details.html",  page_handler, {details}},
                              {"/flow.html",     page_handler, {flow}},
                              {"/prep.html",     page_handler, {prep}},
                              {"/pend.html",     page_handler, {pend}},
@@ -86,6 +86,7 @@ start(_Type, _Args) ->
                              {"/events.html",   page_handler, {events}},
                              {"/cashout.html",  page_handler, {cashout}},
                              {"/wrapup.html",   page_handler, {wrapup}},
+                             {"/over.html",     page_handler, {over}},
                              {"/[...]", cowboy_static,
                               {priv_dir, middle_server, "",
                                [{mimetypes, cow_mimetypes, all}]}}

@@ -7,7 +7,7 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 06 June 2014                                              %%%
+%%% Changed     : 08 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -46,52 +46,66 @@ content_types_provided(Req, State) ->
 %% ----------------------------------------------------------------------------
 %% assemble index.html
 page(Req, State) ->
-    Body = erlang:iolist_to_binary([
-                                    block("head.html"),
-                                    html(State),
-                                    block("foot.html")]),
-    HTML = [<<"<!DOCTYPE html><html><head><title>Index</title></head>",
-              "<body>">>, Body, <<"</body></html>\n">>],
+    {Block} = State,
+    Title = erlang:iolist_to_binary("AIX WC 14 - " ++ atom_to_list(Block)),
+    Body  = erlang:iolist_to_binary([
+                                     block("head.html"),
+                                     html(State),
+                                     block("foot.html")]),
+    HTML = [<<"<!DOCTYPE html><html><head><title>">>,
+            Title,
+            <<"</title></head><body>">>,
+            Body,
+            <<"</body></html>\n">>],
     {HTML, Req, somepath}. %% TODO somepath?
 
-html({index}) ->
-    bets_html(samples());
+html({index}=State) ->
+    {Block} = State,
+    Bin = block(Block),
+    Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
+    Bin2;
 
 html({about}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({intro}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({bets}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State,
+    Bin = block(Block),
+    Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
+    Bin2;
 
-html({bet}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+html({details}=State) ->
+    {Block} = State, block(Block);
 
 html({flow}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({prep}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({pend}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({sign}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({followup}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({status}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({cashout}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
 
 html({wrapup}=State) ->
-    placeholder(io_lib:format("~p", [State]));
+    {Block} = State, block(Block);
+
+html({over}=State) ->
+    {Block} = State, block(Block);
 
 html(State) ->
     placeholder(io_lib:format("~p ?", [State])).
@@ -115,6 +129,10 @@ bet_html(Template, Data) ->
 %% ----------------------------------------------------------------------------
 
 %% load the HTML from a template block
+block(Name) when is_atom(Name)->
+    File = atom_to_list(Name) ++ ".html",
+    block(File);
+
 block(Name) ->
     %% io:format("file path: ~p~n", [full_path(Name)]),
     {ok, Bin} = file:read_file(full_path(Name)),
@@ -138,11 +156,11 @@ samples() ->
       {no_bidder, "YOU?"},
       {no_pubkey, "--"},
       {smallprint, "small print"}],
-     [{bet, "Germany beat Brazil"},
-      {yes_amount, "10"},
-      {no_amount, "3"},
-      {yes_bidder, "Hans Langen"},
-      {yes_pubkey, "#1dkuebmicbfviwkjnbepivavriongerjvdfkjn"},
+     [{bet, "Honduras beat England"},
+      {yes_amount, "1"},
+      {no_amount, ".1"},
+      {yes_bidder, "Bertl Gust"},
+      {yes_pubkey, "#yTgtYhj64dggryew2bd32131141ngerjvdf342"},
       {no_bidder, "YOU?"},
       {no_pubkey, "--"},
       {smallprint, "small print"}]
