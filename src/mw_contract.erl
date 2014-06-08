@@ -21,6 +21,7 @@
 -export([]). %% TODO: remove export_all and add API exports
 
 -include("mw.hrl").
+-include("mw_contract.hrl").
 -include("log.hrl").
 -include("mw_api_errors.hrl").
 
@@ -65,7 +66,8 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
 create_contract(EventId) ->
-    ok = mw_pg:insert_contract(EventId),
+    {ok, ContractId} = mw_pg:insert_contract(EventId),
+    ok = mw_pg:insert_contract_event(ContractId, ?CONTRACT_STATE_DESC_CREATED),
     ok.
 
 clone_contract(Id) ->
@@ -107,7 +109,7 @@ create_contract_event(Event) ->
 do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     {ok, RSAPubKey} = pem_decode_bin(mw_lib:hex_to_bin(RSAPubKeyHex)),
     {YesOrNo, GiverOrTaker, GiverKey} =
-        case mw_pg:select_contract(ContractId) of
+        case mw_pg:select_contract_ec_pubkeys(ContractId) of
             {ok, null, null}          -> {yes, giver, nope};
             {ok, GiverECPubKey, null} -> {no, taker, GiverECPubKey};
             {ok, _GiverECPubKey, _TakerECPubKey} -> ?API_ERROR(?CONTRACT_FULL);

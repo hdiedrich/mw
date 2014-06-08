@@ -17,7 +17,46 @@
 %%%===========================================================================
 %%% API
 %%%===========================================================================
-select_contract(Id) ->
+insert_contract_event(ContractId, Event) ->
+    Statement =
+        "INSERT INTO contract_events (time, description) "
+        "VALUES "
+        "( CAST(now() at time zone 'utc' AS timestamp with time zone), $1 ) "
+        "RETURNING id;",
+    {ok, [{<<"id">>, ContractEventId}]} =
+        mw_pg_lib:parse_insert_result(
+          mw_pg_lib:equery(Statement, [
+                                       mw_pg_lib:ensure_epgsql_type(Event)
+                                      ])),
+    Statement2 =
+        "INSERT INTO contract_events_maps (contract_id, contract_event_id) "
+        "VALUES ( $1, $2 );",
+    {ok, _} =
+        mw_pg_lib:parse_insert_result(
+          mw_pg_lib:equery(Statement2,
+                           [
+                            mw_pg_lib:ensure_epgsql_type(ContractId),
+                            mw_pg_lib:ensure_epgsql_type(ContractEventId)
+                           ])),
+    ok.
+
+select_contract_state(Id) ->
+    Statement =
+        "SELECT c. "
+        "FROM contracts c "
+        "WHERE c.id = $1;",
+    Res =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement,
+                           [mw_pg_lib:ensure_epgsql_type(Id)])),
+    case Res of
+        {ok, []} ->
+            {ok, todo};
+        Other ->
+            {error, Other}
+    end.
+
+select_contract_ec_pubkeys(Id) ->
     Statement =
         "SELECT c.giver_ec_pubkey, c.taker_ec_pubkey "
         "FROM contracts c "
@@ -38,11 +77,11 @@ select_contract(Id) ->
 insert_contract(EventId) ->
     Statement =
         "INSERT INTO contracts (event_id) "
-        "VALUES ( $1 );",
-    {ok, _} =
+        "VALUES ( $1 ) RETURNING id;",
+    {ok, [{<<"id">>, NewId}]} =
         mw_pg_lib:parse_insert_result(
           mw_pg_lib:equery(Statement, [mw_pg_lib:ensure_epgsql_type(EventId)])),
-    ok.
+    {ok, NewId}.
 
 clone_contract(Id) ->
     Statement =
