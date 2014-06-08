@@ -9,8 +9,8 @@
 
 -define(CONTRACT_STATE_DESC_GIVER_SIGNED_T2, "Giver signed T2.").
 -define(CONTRACT_STATE_DESC_TAKER_SIGNED_T2, "Taker signed T2.").
--define(CONTRACT_STATE_DESC_T2_BROADCASTED, "T2 broadcasted.").
--define(CONTRACT_STATE_DESC_T2_BROADCASTED, "T2 mined.").
+-define(CONTRACT_STATE_DESC_T2_BROADCASTED,  "T2 broadcasted.").
+-define(CONTRACT_STATE_DESC_T2_MINED,        "T2 mined.").
 
 -define(CONTRACT_STATE_DESC_EVENT_OUTCOME_HAPPENED, "Event outcome happened.").
 
@@ -19,7 +19,7 @@
 -define(CONTRACT_STATE_DESC_ORACLE_SIGNED_T3, "Oracle signed T3.").
 
 -define(CONTRACT_STATE_DESC_T3_BROADCASTED, "T3 broadcasted.").
--define(CONTRACT_STATE_DESC_T3_BROADCASTED, "T3 mined.").
+-define(CONTRACT_STATE_DESC_T3_MINED, "T3 mined.").
 
 %% Abort events
 -define(CONTRACT_STATE_DESC_GIVER_ABORT_BEFORE_T1, "Giver aborted before hir T1.").

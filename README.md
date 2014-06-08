@@ -93,7 +93,7 @@ The results are JSON objects. They are created in `api_handler.erl`. The matchin
 E.g. this is a curl request to enter a new contract: 
 
 ``` bash
-curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"pubkey":"0457a6e187af6dcad28f678a92850610504aa64685b4d6f60cbc30c1a1407a0ce03df1d51102eb09aca7ca6df77c06fe3ef6054e2ee9dac7b5ac849f6e5c026b73"}'  http://localhost:8081/enter-contract/42
+curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"ec_pubkey":"cafebabe", "rsa_pubkey":"cafebabe"}'  http://localhost:8081/enter-contract/42
 ```
 
 
