@@ -1,5 +1,6 @@
 %% Happy path states
 -define(CONTRACT_STATE_DESC_CREATED, "Contract created.").
+-define(CONTRACT_STATE_DESC_CLONED,  "Contract cloned.").
 
 -define(CONTRACT_STATE_DESC_GIVER_ENTERED, "Giver entered contract.").
 -define(CONTRACT_STATE_DESC_TAKER_ENTERED, "Taker entered contract.").
