@@ -25,6 +25,8 @@
 -include("log.hrl").
 -include("mw_api_errors.hrl").
 
+-define(GET(PL), fun(Key) -> proplists:get_value(Key, PL, not_found) end).
+
 -define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
@@ -65,6 +67,39 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
+get_contract_info(Id) ->
+    {ok, MatchNo, Headline, Desc, Outcome,
+     GiverECPubKey, TakerECPubKey,
+     FormatedEvents} =
+        mw_pg:select_contract_info(Id),
+    %% Some of these fields have same name as Postgres column names, but we
+    %% avoid the temptation of using them directly to have separation between
+    %% postgres schema and JSON API schema
+    {ok, [
+          {"match_no", MatchNo},
+          {"headline", Headline},
+          {"desc", Desc},
+          {"outcome", Outcome},
+          {"giver_ec_pubkey", GiverECPubKey},
+          {"taker_ec_pubkey", TakerECPubKey},
+          {"history", lists:map(fun({Timestamp, Event}) ->
+                                        [{"timestamp", Timestamp},
+                                         {"event", Event}]
+                                end, FormatedEvents)}
+         ]}.
+
+check_if_contract_can_be_signed(Id) ->
+    {ok, Info} = get_contract_info(Id),
+    Get = ?GET(Info),
+    case {Get("giver_ec_pubkey"), Get("taker_ec_pubkey")} of
+        {null, null} -> ?API_ERROR(?CONTRACT_EMPTY);
+        {null, _Key} -> ?API_ERROR(?CONTRACT_ONLY_TAKER);
+        {_Key, null} -> ?API_ERROR(?CONTRACT_ONLY_GIVER);
+        {GiverKey, TakerKey} ->
+            todo
+    end,
+    todo.
+
 create_contract(EventId) ->
     {ok, ContractId} = mw_pg:insert_contract(EventId),
     ok = mw_pg:insert_contract_event(ContractId, ?CONTRACT_STATE_DESC_CREATED),
@@ -100,20 +135,6 @@ create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey)
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
-get_contract_info(Id) ->
-    {ok, MatchNo, Headline, Desc, Outcome, FormatedEvents} =
-        mw_pg:select_contract_info(Id),
-    {ok, [
-          {"match_no", MatchNo},
-          {"headline", Headline},
-          {"desc", Desc},
-          {"outcome", Outcome},
-          {"history", lists:map(fun({Timestamp, Event}) ->
-                                        [{"timestamp", Timestamp},
-                                         {"event", Event}]
-                                end, FormatedEvents)}
-         ]}.
-
 create_contract_event(Event) ->
     ok = mw_pg:insert_contract_event(Event),
     ok.

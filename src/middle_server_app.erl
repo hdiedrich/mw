@@ -34,7 +34,7 @@ start(_Type, _Args) ->
                          {pgsql_pool, [{size, 1}, {max_overflow, 1}],
                           [
                            {host, "localhost"},
-                           {dbname, "mw_alpha"},
+                           {dbname, "mw"},
                            {user, "mw"},
                            {pass, "mw"}
                           ]}

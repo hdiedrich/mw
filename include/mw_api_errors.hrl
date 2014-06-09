@@ -7,3 +7,7 @@
 -define(RSA_PUBKEY_LEN, {4, "hex enc rsa pubkey is not correct length (902)"}).
 -define(CONTRACT_FULL, {5, "contract full; has giver and taker"}).
 -define(CONTRACT_NOT_FOUND, {6, "contract not found"}).
+
+-define(CONTRACT_EMPTY, {7, "contract empty"}).
+-define(CONTRACT_ONLY_GIVER, {8, "contract only has giver"}).
+-define(CONTRACT_ONLY_TAKER, {9, "contract only has taker"}).
