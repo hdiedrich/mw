@@ -53,13 +53,17 @@ select_contract_info(Id) ->
           mw_pg_lib:equery(Statement,
                            [mw_pg_lib:ensure_epgsql_type(Id)])),
     Statement2 =
-        "SELECT e.match_no, e.headline, e.description, e.outcome "
+        "SELECT e.match_no, e.headline, e.description, e.outcome, "
+        "       c.giver_ec_pubkey, c.taker_ec_pubkey "
         "FROM events e, contracts c "
         "WHERE e.id = c.event_id and c.id = $1;",
     {ok, [[{<<"match_no">>, MatchNo},
            {<<"headline">>, Headline},
            {<<"description">>, Desc},
-           {<<"outcome">>, Outcome}]]} =
+           {<<"outcome">>, Outcome},
+           {<<"giver_ec_pubkey">>, GiverECPubKey},
+           {<<"taker_ec_pubkey">>, TakerECPubKey}
+          ]]} =
         mw_pg_lib:parse_select_result(
           mw_pg_lib:equery(Statement2,
                            [mw_pg_lib:ensure_epgsql_type(Id)])),
@@ -70,7 +74,9 @@ select_contract_info(Id) ->
                 {mw_lib:datetime_to_iso_timestamp(DT), D}
         end,
     FormatedEvents = lists:map(FormatEvent, Events),
-    {ok, MatchNo, Headline, Desc, Outcome, FormatedEvents}.
+    {ok, MatchNo, Headline, Desc, Outcome,
+     GiverECPubKey, TakerECPubKey,
+     FormatedEvents}.
 
 select_contract_ec_pubkeys(Id) ->
     Statement =
