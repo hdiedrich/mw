@@ -7,7 +7,7 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 08 June 2014                                              %%%
+%%% Changed     : 09 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -50,7 +50,7 @@ page(Req, State) ->
     Title = erlang:iolist_to_binary("AIX WC 14 - " ++ atom_to_list(Block)),
     Body  = erlang:iolist_to_binary([
                                      block("head.html"),
-                                     html(State),
+                                     html(Req, State),
                                      block("foot.html")]),
     HTML = [<<"<!DOCTYPE html><html><head><title>">>,
             Title,
@@ -59,55 +59,70 @@ page(Req, State) ->
             <<"</body></html>\n">>],
     {HTML, Req, somepath}. %% TODO somepath?
 
-html({index}=State) ->
+html(_Req, {index}=State) ->
     {Block} = State,
     Bin = block(Block),
     Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
     Bin2;
 
-html({about}=State) ->
-    {Block} = State, block(Block);
+html(_Req, {about}=State) ->
+    {Block} = State,
+    block(Block);
 
-html({intro}=State) ->
-    {Block} = State, block(Block);
 
-html({bets}=State) ->
+html(_Req, {intro}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {bets}=State) ->
     {Block} = State,
     Bin = block(Block),
     Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
     Bin2;
 
-html({details}=State) ->
+html(_Req, {details}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {flow}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {prep}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {pend}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {sign}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(_Req, {followup}=State) ->
+    {Block} = State,
+    block(Block);
+
+html(Req, {status}=_State) ->
+    {Id, _} = cowboy_req:binding(id, Req, none),
+    case Id of
+      none ->
+        "Enter ID ... ";
+      _ ->
+         merge(block(status), [{status, Id}])
+    end;
+
+html(_Req, {cashout}=State) ->
     {Block} = State, block(Block);
 
-html({flow}=State) ->
+html(_Req, {wrapup}=State) ->
     {Block} = State, block(Block);
 
-html({prep}=State) ->
+html(_Req, {over}=State) ->
     {Block} = State, block(Block);
 
-html({pend}=State) ->
-    {Block} = State, block(Block);
-
-html({sign}=State) ->
-    {Block} = State, block(Block);
-
-html({followup}=State) ->
-    {Block} = State, block(Block);
-
-html({status}=State) ->
-    {Block} = State, block(Block);
-
-html({cashout}=State) ->
-    {Block} = State, block(Block);
-
-html({wrapup}=State) ->
-    {Block} = State, block(Block);
-
-html({over}=State) ->
-    {Block} = State, block(Block);
-
-html(State) ->
+html(_Req, State) ->
     placeholder(io_lib:format("~p ?", [State])).
 
 
