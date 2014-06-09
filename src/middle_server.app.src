@@ -28,7 +28,8 @@
                 cowboy,
                 poolboy,
                 epgsql,
-                jiffy
+                jiffy,
+                lhttpc
         ]},
         {mod, {middle_server_app, []}},
         {env, []}
