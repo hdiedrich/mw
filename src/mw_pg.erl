@@ -54,15 +54,20 @@ select_contract_info(Id) ->
                            [mw_pg_lib:ensure_epgsql_type(Id)])),
     Statement2 =
         "SELECT e.match_no, e.headline, e.description, e.outcome, "
-        "       c.giver_ec_pubkey, c.taker_ec_pubkey "
+        "       e.event_pubkey, c.giver_ec_pubkey, c.taker_ec_pubkey, "
+        "       c.t2_sighash_input_0, c.t2_sighash_input_1, t2_raw "
         "FROM events e, contracts c "
         "WHERE e.id = c.event_id and c.id = $1;",
     {ok, [[{<<"match_no">>, MatchNo},
            {<<"headline">>, Headline},
            {<<"description">>, Desc},
            {<<"outcome">>, Outcome},
+           {<<"event_pubkey">>, EventPubKey},
            {<<"giver_ec_pubkey">>, GiverECPubKey},
-           {<<"taker_ec_pubkey">>, TakerECPubKey}
+           {<<"taker_ec_pubkey">>, TakerECPubKey},
+           {<<"t2_sighash_input_0">>, T2SigHashInput0},
+           {<<"t2_sighash_input_1">>, T2SigHashInput1},
+           {<<"t2_raw">>, T2Raw}
           ]]} =
         mw_pg_lib:parse_select_result(
           mw_pg_lib:equery(Statement2,
@@ -71,11 +76,12 @@ select_contract_info(Id) ->
     FormatEvent =
         fun([{<<"timezone">>, DT},
              {<<"description">>, D}]) ->
-                {mw_lib:datetime_to_iso_timestamp(DT), D}
+            {mw_lib:datetime_to_iso_timestamp(DT), D}
         end,
     FormatedEvents = lists:map(FormatEvent, Events),
     {ok, MatchNo, Headline, Desc, Outcome,
-     GiverECPubKey, TakerECPubKey,
+     EventPubKey, GiverECPubKey, TakerECPubKey,
+     T2SigHashInput0, T2SigHashInput1, T2Raw,
      FormatedEvents}.
 
 select_contract_ec_pubkeys(Id) ->
@@ -119,6 +125,7 @@ clone_contract(Id) ->
         mw_pg_lib:parse_insert_result(mw_pg_lib:equery(S, [EventId])),
     {ok, NewId}.
 
+%% Add giver or taker
 update_contract(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
     {ECKeyTable, RSAKeyTable, EventKeyTable} =
         case GiverOrTaker of
@@ -135,6 +142,20 @@ update_contract(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
         "WHERE id = $4;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
                        [ECPubKey, RSAPubKey, EventKeyDoubleEnc, Id]),
+    {ok, _} = mw_pg_lib:parse_insert_result(
+                mw_pg_lib:equery(Statement, Params)),
+    ok.
+
+%% Add t2 sighashes and t2 raw
+update_contract(Id, T2SigHashInput0, T2SigHashInput1, T2Raw) ->
+    Statement =
+        "UPDATE contracts SET "
+        "t2_sighash_input_0 = $1, "
+        "t2_sighash_input_1 = $2, "
+        "t2_raw = $3 "
+        "WHERE id = $4;",
+    Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
+                       [T2SigHashInput0, T2SigHashInput1, T2Raw, Id]),
     {ok, _} = mw_pg_lib:parse_insert_result(
                 mw_pg_lib:equery(Statement, Params)),
     ok.

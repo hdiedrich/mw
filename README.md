@@ -90,7 +90,7 @@ There are currently
 
 The results are JSON objects. They are created in `api_handler.erl`. The matching of the URL is hard coded in the main dispatch rule, in `middle_server.erl` and matching atoms in `api_handler:response/2`.
 
-E.g. this is a curl request to enter a new contract: 
+E.g. this is a curl request to enter a new contract:
 
 ``` bash
 curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"ec_pubkey":"cafebabe", "rsa_pubkey":"cafebabe"}'  http://localhost:8081/enter-contract/42
@@ -136,7 +136,7 @@ Both sample.html and index.html use the stylesheet in `priv/style.css`. It is se
 There is now a mechanism and stubs for all pages in the MVP #2 flow (see Pirate Pad). The flow is basically completely sequential, most of the time simply offering a 'continue' link, one page following the next.
 
 When you have the server running on localhost, click through the pages to check them out.
- 
+
  * [index.html](http://localhost:8080/index.html)       - landing page showing some bets
  * [about.html](http://localhost:8080/about.html)       - explanation of site and purpose
  * [intro.html](http://localhost:8080/intro.html)       - how to make a bet
@@ -147,14 +147,14 @@ When you have the server running on localhost, click through the pages to check 
  * [pend.html](http://localhost:8080/pend.html)         - waiting page for T1, showing its status
  * [sign.html](http://localhost:8080/sign.html)         - signing of T2 with signing scripts
  * [followup.html](http://localhost:8080/followup.html) - explanation of what to do next
- * [status.html](http://localhost:8080/status.html)     - status page for T2 
+ * [status.html](http://localhost:8080/status.html)     - status page for T2
  * [events.html](http://localhost:8080/events.html)     - list of all events that have a decision
  * [cashout.html](http://localhost:8080/cashout.html)   - creation and signing of T3
  * [wrapup.html](http://localhost:8080/wrapup.html)     - status of T3 and congratulations
  * [over.html](http://localhost:8080/over.html)         - game over & thank you message for losers
 
 We might want to cut one or two pages. But not now maybe.
- 
+
 
 ### BitcoinJS
 
@@ -162,5 +162,3 @@ Test BitcoinJS with [http://localhost:8080/hello-js.html](http://localhost:8080/
 
 This will give you a page with basic BitcoinJS operations like key creation,
 hasing and signing.
-
-
