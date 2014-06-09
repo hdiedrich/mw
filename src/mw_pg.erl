@@ -71,7 +71,7 @@ select_contract_info(Id) ->
     FormatEvent =
         fun([{<<"timezone">>, DT},
              {<<"description">>, D}]) ->
-                {mw_lib:datetime_to_iso_timestamp(DT), D}
+            {mw_lib:datetime_to_iso_timestamp(DT), D}
         end,
     FormatedEvents = lists:map(FormatEvent, Events),
     {ok, MatchNo, Headline, Desc, Outcome,

@@ -23,7 +23,7 @@
 -define(CONTRACT_STATE_DESC_ORACLE_SIGNED_T3, "Oracle signed T3.").
 
 %% Use this for MVP
--define(CONTRACT_STATE_DESC_ORACLE_SIGNED_T3, "T3 signed.").
+-define(CONTRACT_STATE_DESC_SIGNED_T3, "T3 signed.").
 
 -define(CONTRACT_STATE_DESC_T3_BROADCASTED, "T3 broadcasted.").
 -define(CONTRACT_STATE_DESC_T3_MINED, "T3 mined.").

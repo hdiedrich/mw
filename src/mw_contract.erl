@@ -57,7 +57,7 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey), ?PUBKEY_TYPE),
-    %?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
     api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
@@ -67,6 +67,46 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
+core_contract_flow(Id, Params) ->
+    {ok, Info} = get_contract_info(Id),
+    Get = ?GET(Info),
+    History = Get("history"),
+    Happened =
+        fun(E) ->
+                case lists:filter(fun([_,{_, E}]) -> true; (_) -> false end,
+                                  History) of
+                    %% Explicit match instead of e.g. lists:any/2
+                    %% to enforce no duplicated events
+                    []  -> false;
+                    [_] -> true
+                end
+        end,
+    case {Happened(?CONTRACT_STATE_DESC_GIVER_T1),
+          Happened(?CONTRACT_STATE_DESC_TAKER_T1)} of
+        {false, false} ->
+            ok_state_unchanged;
+        {true, false} ->
+            %% TODO call Bj for giver incomplete T2
+            todo;
+        {false, true} ->
+            %% TODO call Bj for taker incomplete T2
+            todo;
+        {true, true} ->
+            %% TODO call Bj for both
+            todo
+    end,
+
+    %case {Get("giver_ec_pubkey"), Get("taker_ec_pubkey")} of
+     %   {null, null} -> ?API_ERROR(?CONTRACT_EMPTY);
+      %  {null, _Key} -> ?API_ERROR(?CONTRACT_ONLY_TAKER);
+       % {_Key, null} -> ?API_ERROR(?CONTRACT_ONLY_GIVER);
+        %{GiverKey, TakerKey} ->
+         %   todo
+    %end,
+
+
+    todo.
+
 get_contract_info(Id) ->
     {ok, MatchNo, Headline, Desc, Outcome,
      GiverECPubKey, TakerECPubKey,
@@ -88,18 +128,6 @@ get_contract_info(Id) ->
                                 end, FormatedEvents)}
          ]}.
 
-check_if_contract_can_be_signed(Id) ->
-    {ok, Info} = get_contract_info(Id),
-    Get = ?GET(Info),
-    case {Get("giver_ec_pubkey"), Get("taker_ec_pubkey")} of
-        {null, null} -> ?API_ERROR(?CONTRACT_EMPTY);
-        {null, _Key} -> ?API_ERROR(?CONTRACT_ONLY_TAKER);
-        {_Key, null} -> ?API_ERROR(?CONTRACT_ONLY_GIVER);
-        {GiverKey, TakerKey} ->
-            todo
-    end,
-    todo.
-
 create_contract(EventId) ->
     {ok, ContractId} = mw_pg:insert_contract(EventId),
     ok = mw_pg:insert_contract_event(ContractId, ?CONTRACT_STATE_DESC_CREATED),
@@ -112,10 +140,10 @@ clone_contract(Id) ->
 
 create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %% Validations for EC keys
-    %api_validation(is_binary(NOPubKey), ?PUBKEY_TYPE),
-    %api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
-    %api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
-    %api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
+    %%api_validation(is_binary(NOPubKey), ?PUBKEY_TYPE),
+    %%api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
+    %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
+    %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
     ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
@@ -174,7 +202,7 @@ pem_decode_bin(Bin) ->
 rsa_key_from_file(PrivPath) ->
     AbsPath = filename:join(code:priv_dir(middle_server), PrivPath),
     {ok, Bin} = file:read_file(AbsPath),
-    %{ok, Key} = pem_decode_bin(Bin),
+    %%{ok, Key} = pem_decode_bin(Bin),
     Bin.
 
 hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
