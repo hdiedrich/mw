@@ -17,11 +17,13 @@
 %%%===========================================================================
 %%% API
 %%%===========================================================================
+%% TODO: add timestamp as parameter, as e.g. events like T2 mined/broadcast
+%% is not exactly time when we insert event
 insert_contract_event(ContractId, Event) ->
     Statement =
         "INSERT INTO contract_events (time, description) "
         "VALUES "
-        "( CAST(now() at time zone 'utc' AS timestamp with time zone), $1 ) "
+        "( CAST(now() AT TIME ZONE 'UTC' AS timestamp with time zone), $1 ) "
         "RETURNING id;",
     {ok, [{<<"id">>, ContractEventId}]} =
         mw_pg_lib:parse_insert_result(
@@ -40,21 +42,35 @@ insert_contract_event(ContractId, Event) ->
                            ])),
     ok.
 
-select_contract_state(Id) ->
+select_contract_info(Id) ->
     Statement =
-        "SELECT c. "
-        "FROM contracts c "
-        "WHERE c.id = $1;",
-    Res =
+        "SELECT ce.time AT TIME ZONE 'UTC', ce.description "
+        "FROM contracts c, contract_events ce, contract_events_maps cem "
+        "WHERE ce.id = cem.contract_event_id and cem.contract_id = c.id and "
+        "c.id = $1;",
+    {ok, Events} =
         mw_pg_lib:parse_select_result(
           mw_pg_lib:equery(Statement,
                            [mw_pg_lib:ensure_epgsql_type(Id)])),
-    case Res of
-        {ok, []} ->
-            {ok, todo};
-        Other ->
-            {error, Other}
-    end.
+    Statement2 =
+        "SELECT e.match_no, e.headline, e.description, e.outcome "
+        "FROM events e, contracts c "
+        "WHERE e.id = c.event_id and c.id = $1;",
+    {ok, [[{<<"match_no">>, MatchNo},
+           {<<"headline">>, Headline},
+           {<<"description">>, Desc},
+           {<<"outcome">>, Outcome}]]} =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement2,
+                           [mw_pg_lib:ensure_epgsql_type(Id)])),
+
+    FormatEvent =
+        fun([{<<"timezone">>, DT},
+             {<<"description">>, D}]) ->
+                {mw_lib:datetime_to_iso_timestamp(DT), D}
+        end,
+    FormatedEvents = lists:map(FormatEvent, Events),
+    {ok, MatchNo, Headline, Desc, Outcome, FormatedEvents}.
 
 select_contract_ec_pubkeys(Id) ->
     Statement =

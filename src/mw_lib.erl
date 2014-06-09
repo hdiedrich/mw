@@ -27,6 +27,14 @@ bin_to_hex(B) when is_binary(B) ->
                                 2 -> S
                             end))/bytes>> || <<I>> <= B>>.
 
+datetime_to_iso_timestamp({Date, {H, Min, Sec}}) when is_float(Sec) ->
+    %% TODO: proper support for milliseconds
+    datetime_to_iso_timestamp({Date, {H, Min, round(Sec)}});
+datetime_to_iso_timestamp({{Y, Mo, D}, {H, Min, Sec}}) when is_integer(Sec) ->
+    FmtStr = "~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
+    IsoStr = io_lib:format(FmtStr, [Y, Mo, D, H, Min, Sec]),
+    list_to_binary(IsoStr).
+
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================

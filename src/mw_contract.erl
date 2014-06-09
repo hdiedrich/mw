@@ -72,6 +72,7 @@ create_contract(EventId) ->
 
 clone_contract(Id) ->
     {ok, NewId} = mw_pg:clone_contract(Id),
+    ok = mw_pg:insert_contract_event(NewId, ?CONTRACT_STATE_DESC_CLONED),
     [{"new_contract", NewId}].
 
 create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
@@ -83,7 +84,7 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
-create_event(MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) ->
+create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) ->
     {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
     {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
     {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
@@ -99,6 +100,20 @@ create_event(MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) 
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
+get_contract_info(Id) ->
+    {ok, MatchNo, Headline, Desc, Outcome, FormatedEvents} =
+        mw_pg:select_contract_info(Id),
+    {ok, [
+          {"match_no", MatchNo},
+          {"headline", Headline},
+          {"desc", Desc},
+          {"outcome", Outcome},
+          {"history", lists:map(fun({Timestamp, Event}) ->
+                                        [{"timestamp", Timestamp},
+                                         {"event", Event}]
+                                end, FormatedEvents)}
+         ]}.
+
 create_contract_event(Event) ->
     ok = mw_pg:insert_contract_event(Event),
     ok.
@@ -108,7 +123,7 @@ create_contract_event(Event) ->
 %% TODO: generalize
 do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     {ok, RSAPubKey} = pem_decode_bin(mw_lib:hex_to_bin(RSAPubKeyHex)),
-    {YesOrNo, GiverOrTaker, GiverKey} =
+    {YesOrNo, GiverOrTaker, _GiverKey} =
         case mw_pg:select_contract_ec_pubkeys(ContractId) of
             {ok, null, null}          -> {yes, giver, nope};
             {ok, GiverECPubKey, null} -> {no, taker, GiverECPubKey};
@@ -120,6 +135,11 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     DoubleEncEventKey = hybrid_aes_rsa_enc(EncEventKey, RSAPubKey),
     ok = mw_pg:update_contract(ContractId, GiverOrTaker,
                                ECPubKey, RSAPubKeyHex, DoubleEncEventKey),
+    EnteredEvent = case GiverOrTaker of
+                       giver -> ?CONTRACT_STATE_DESC_GIVER_ENTERED;
+                       taker -> ?CONTRACT_STATE_DESC_TAKER_ENTERED
+                   end,
+    ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
     ok.
 
 api_validation(false, APIError) -> ?API_ERROR(APIError);
