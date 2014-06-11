@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.3.x/web flow                                            %%%
+%%% Version     : 0.4.x/dynamic pages                                       %%%
 %%% File        : page_handler.erl                                          %%%
 %%% Description : web site page creation, as a handler for Cowboy           %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 09 June 2014                                              %%%
+%%% Changed     : 11 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -110,7 +110,16 @@ html(Req, {status}=_State) ->
       none ->
         "Enter ID ... ";
       _ ->
-         merge(block(status), [{status, Id}])
+        case mw_contract:get_contract_info(binary_to_integer(Id)) of
+          {ok, Props} ->
+            Headline = proplists:get_value("headline", Props, <<"?">>),
+            History = events_to_html(proplists:get_value("history", Props)),
+            merge(block(status),
+              [{headline, Headline},
+               {status, History},
+               {dump, prop_to_html(Props)}
+             ])
+        end
     end;
 
 html(_Req, {cashout}=State) ->
@@ -195,3 +204,19 @@ merge(Template, [{Tag, String} | Data]) ->
 %% Placeholder for pages under construction
 placeholder(S) ->
     "<h3>" ++ S ++ "</h3>".
+
+%% dump a prop list
+prop_to_html(Prop) ->
+    io_lib:format("<pre>~p</pre>", [Prop]).
+
+%% make a html list from the contract events as they come from the DB 
+events_to_html([]) -> [];
+
+events_to_html([P | L]) ->
+    [<<"<p> ">>,
+     proplists:get_value("timestamp", P, <<"">>),
+     <<": ">>,
+     proplists:get_value("event", P, <<"">>),
+     <<" <\p>">>] ++
+     events_to_html(L).
+
