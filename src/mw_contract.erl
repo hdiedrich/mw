@@ -30,6 +30,9 @@
 -define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
+-define(BJ_REQUEST_URL, <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_REQUEST_TIMEOUT, 5000).
+
 %%%===========================================================================
 %%% Testnet keys for tests / dev / debug
 %%%===========================================================================
@@ -57,7 +60,7 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey), ?PUBKEY_TYPE),
-    %?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
     api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
@@ -67,9 +70,58 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
+
+
+%% For MVP #2 this can be used for pages: prep, pend, sign and status
+get_contract_signing_state(Id) ->
+    {ok, Info}  = get_contract_info(Id),
+    GetInfo         = ?GET(Info),
+    History     = GetInfo("history"),
+    EventPubKey = GetInfo("event_pubkey"),
+    GiverPubKey = GetInfo("giver_ec_pubkey"),
+    TakerPubKey = GetInfo("taker_ec_pubkey"),
+    Value       = <<"2000000">>,
+
+    %% TODO: for now we simplify flow and assume both have sent T1
+    %% when we get first T2 from Bj
+    case {contract_event_happened(History, ?STATE_DESC_GIVER_T1),
+          contract_event_happened(History, ?STATE_DESC_TAKER_T1)} of
+        {true, true} ->
+            %% waiting for signatures; unchanged state
+            {ok, Info};
+        {false, false} ->
+            %% call Bj to see if t1 outputs are available as t2 inputs
+            ReqRes = bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey,
+                                            EventPubKey, Value),
+            ?info("bj_req_get_unsigned_t2: ~p", [ReqRes]),
+            GetRes = ?GET(ReqRes),
+            case GetRes("error-message") of
+                not_found ->
+                    T2SigHashInput0 = GetRes("t2-sighash-input-0"), %% giver
+                    T2SigHashInput1 = GetRes("t2-sighash-input-1"), %% taker
+                    T2Raw = GetRes("t2-raw"), %% taker
+                    ok = mw_pg:update_contract(Id, T2SigHashInput0,
+                                               T2SigHashInput1, T2Raw),
+                    ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_GIVER_T1),
+                    ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_TAKER_T1),
+                    NewStuff = [{"t2_sighash_input_0", T2SigHashInput0},
+                                {"t2_sighash_input_1", T2SigHashInput1},
+                                {"t2_raw", T2Raw}],
+                    NewInfo =
+                        lists:foldl(fun({K,V}, TL) ->
+                                            lists:keyreplace(K, 1, TL, {K,V})
+                                    end, Info, NewStuff),
+                    {ok, NewInfo};
+                _ErrorMsg ->
+                    %% No t2 / sighashes from Bj: no T1 outputs available; unchanged state
+                    {ok, Info}
+            end
+    end.
+
 get_contract_info(Id) ->
     {ok, MatchNo, Headline, Desc, Outcome,
-     GiverECPubKey, TakerECPubKey,
+     EventPubKey, GiverECPubKey, TakerECPubKey,
+     T2SigHashInput0, T2SigHashInput1, T2Raw,
      FormatedEvents} =
         mw_pg:select_contract_info(Id),
     %% Some of these fields have same name as Postgres column names, but we
@@ -80,42 +132,34 @@ get_contract_info(Id) ->
           {"headline", Headline},
           {"desc", Desc},
           {"outcome", Outcome},
+          {"event_pubkey", EventPubKey},
           {"giver_ec_pubkey", GiverECPubKey},
           {"taker_ec_pubkey", TakerECPubKey},
+          {<<"t2_sighash_input_0">>, T2SigHashInput0},
+          {<<"t2_sighash_input_1">>, T2SigHashInput1},
+          {<<"t2_raw">>, T2Raw},
           {"history", lists:map(fun({Timestamp, Event}) ->
                                         [{"timestamp", Timestamp},
                                          {"event", Event}]
                                 end, FormatedEvents)}
          ]}.
 
-check_if_contract_can_be_signed(Id) ->
-    {ok, Info} = get_contract_info(Id),
-    Get = ?GET(Info),
-    case {Get("giver_ec_pubkey"), Get("taker_ec_pubkey")} of
-        {null, null} -> ?API_ERROR(?CONTRACT_EMPTY);
-        {null, _Key} -> ?API_ERROR(?CONTRACT_ONLY_TAKER);
-        {_Key, null} -> ?API_ERROR(?CONTRACT_ONLY_GIVER);
-        {GiverKey, TakerKey} ->
-            todo
-    end,
-    todo.
-
 create_contract(EventId) ->
     {ok, ContractId} = mw_pg:insert_contract(EventId),
-    ok = mw_pg:insert_contract_event(ContractId, ?CONTRACT_STATE_DESC_CREATED),
+    ok = mw_pg:insert_contract_event(ContractId, ?STATE_DESC_CREATED),
     ok.
 
 clone_contract(Id) ->
     {ok, NewId} = mw_pg:clone_contract(Id),
-    ok = mw_pg:insert_contract_event(NewId, ?CONTRACT_STATE_DESC_CLONED),
+    ok = mw_pg:insert_contract_event(NewId, ?STATE_DESC_CLONED),
     [{"new_contract", NewId}].
 
 create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %% Validations for EC keys
-    %api_validation(is_binary(NOPubKey), ?PUBKEY_TYPE),
-    %api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
-    %api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
-    %api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
+    %%api_validation(is_binary(NOPubKey), ?PUBKEY_TYPE),
+    %%api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
+    %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
+    %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
     ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
@@ -148,8 +192,10 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
         case mw_pg:select_contract_ec_pubkeys(ContractId) of
             {ok, null, null}          -> {yes, giver, nope};
             {ok, GiverECPubKey, null} -> {no, taker, GiverECPubKey};
-            {ok, _GiverECPubKey, _TakerECPubKey} -> ?API_ERROR(?CONTRACT_FULL);
-            {error,{ok,[]}}                      -> ?API_ERROR(?CONTRACT_NOT_FOUND)
+            {ok, _GiverECPubKey, _TakerECPubKey} ->
+                ?API_ERROR(?CONTRACT_FULL);
+            {error,{ok,[]}} ->
+                ?API_ERROR(?CONTRACT_NOT_FOUND)
         end,
     {ok, EncEventKey} =
         mw_pg:select_enc_event_privkey(ContractId, YesOrNo),
@@ -157,14 +203,39 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     ok = mw_pg:update_contract(ContractId, GiverOrTaker,
                                ECPubKey, RSAPubKeyHex, DoubleEncEventKey),
     EnteredEvent = case GiverOrTaker of
-                       giver -> ?CONTRACT_STATE_DESC_GIVER_ENTERED;
-                       taker -> ?CONTRACT_STATE_DESC_TAKER_ENTERED
+                       giver -> ?STATE_DESC_GIVER_ENTERED;
+                       taker -> ?STATE_DESC_TAKER_ENTERED
                    end,
     ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
     ok.
 
 api_validation(false, APIError) -> ?API_ERROR(APIError);
 api_validation(true, _) -> continue.
+
+contract_event_happened(History, Event) ->
+    %% contract history is list of list of two two tuples; timestamp and event
+    case lists:filter(fun([_,{_, E}]) when E =:= Event -> true;
+                         (_) -> false end,
+                      History) of
+        %% Explicit match instead of e.g. lists:any/2
+        %% to enforce no duplicated events
+        []  -> false;
+        [_] -> true
+    end.
+
+bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
+                       Value) ->
+    QS = cow_qs:qs(
+           [
+            {<<"giver-pubkey">>, GiverPubKey},
+            {<<"taker-pubkey">>, TakerPubKey},
+            {<<"event-pubkey">>, EventPubKey},
+            {<<"value">>, Value}
+           ]),
+    %% TODO: parse response to proplist
+    {ok, Res} =
+        mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>, [], 5000),
+    Res.
 
 pem_decode_bin(Bin) ->
     [Entry] = public_key:pem_decode(Bin),
@@ -174,7 +245,7 @@ pem_decode_bin(Bin) ->
 rsa_key_from_file(PrivPath) ->
     AbsPath = filename:join(code:priv_dir(middle_server), PrivPath),
     {ok, Bin} = file:read_file(AbsPath),
-    %{ok, Key} = pem_decode_bin(Bin),
+    %%{ok, Key} = pem_decode_bin(Bin),
     Bin.
 
 hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->

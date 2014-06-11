@@ -76,7 +76,9 @@ giver_rsa_pubkey bytea,
 taker_rsa_pubkey bytea,
 event_key_enc_with_oracle_yes_and_giver_keys bytea,
 event_key_enc_with_oracle_no_and_taker_keys bytea,
-t2 bytea,
+t2_sighash_input_0 bytea,
+t2_sighash_input_1 bytea,
+t2_raw bytea,
 PRIMARY KEY (id)
 );
 
