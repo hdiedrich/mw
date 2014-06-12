@@ -21,10 +21,11 @@ pages now that are part of the usage flow.
 Requirements
 ------------
 
-* Erlang ~ 16
-* relx
-* make
 * git
+* make
+* Erlang R17*
+* relx
+* PostgreSQL
 
 PostgreSQL config
 -----------------
@@ -162,3 +163,17 @@ Test BitcoinJS with [http://localhost:8080/hello-js.html](http://localhost:8080/
 
 This will give you a page with basic BitcoinJS operations like key creation,
 hasing and signing.
+
+### Generate test keys
+
+``` bash
+openssl genrsa -out oracle_no_privkey.pem 2048
+openssl rsa -in oracle_no_privkey.pem -pubout > oracle_no_pubkey.pem
+```
+
+``` bash
+git clone https://github.com/matja/bitcoin-tool.git
+make
+sudo cp bitcoin-tool /usr/local/bin
+openssl rand 32 > temp_bytes && bitcoin-tool --network bitcoin-testnet --input-type private-key --input-format raw --input-file temp_bytes --output-type private-key --output-format base58check --public-key-compression compressed > ec_privkey && bitcoin-tool --network bitcoin-testnet --input-type private-key --input-format raw --input-file temp_bytes --output-type public-key --output-format base58check --public-key-compression compressed > ec_pubkey && rm -f temp_bytes
+```
