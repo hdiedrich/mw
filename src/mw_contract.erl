@@ -30,6 +30,7 @@
 -define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
+-define(BJ_MOCKED, true).
 -define(BJ_REQUEST_URL, <<"http://localhost/get-unsigned-t2">>).
 -define(BJ_REQUEST_TIMEOUT, 5000).
 
@@ -70,12 +71,10 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
-
-
 %% For MVP #2 this can be used for pages: prep, pend, sign and status
 get_contract_signing_state(Id) ->
     {ok, Info}  = get_contract_info(Id),
-    GetInfo         = ?GET(Info),
+    GetInfo     = ?GET(Info),
     History     = GetInfo("history"),
     EventPubKey = GetInfo("event_pubkey"),
     GiverPubKey = GetInfo("giver_ec_pubkey"),
@@ -104,13 +103,7 @@ get_contract_signing_state(Id) ->
                                                T2SigHashInput1, T2Raw),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_GIVER_T1),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_TAKER_T1),
-                    NewStuff = [{"t2_sighash_input_0", T2SigHashInput0},
-                                {"t2_sighash_input_1", T2SigHashInput1},
-                                {"t2_raw", T2Raw}],
-                    NewInfo =
-                        lists:foldl(fun({K,V}, TL) ->
-                                            lists:keyreplace(K, 1, TL, {K,V})
-                                    end, Info, NewStuff),
+                    NewInfo = get_contract_info(Id),
                     {ok, NewInfo};
                 _ErrorMsg ->
                     %% No t2 / sighashes from Bj: no T1 outputs available; unchanged state
@@ -135,9 +128,9 @@ get_contract_info(Id) ->
           {"event_pubkey", EventPubKey},
           {"giver_ec_pubkey", GiverECPubKey},
           {"taker_ec_pubkey", TakerECPubKey},
-          {<<"t2_sighash_input_0">>, T2SigHashInput0},
-          {<<"t2_sighash_input_1">>, T2SigHashInput1},
-          {<<"t2_raw">>, T2Raw},
+          {"t2_sighash_input_0", T2SigHashInput0},
+          {"t2_sighash_input_1", T2SigHashInput1},
+          {"t2_raw", T2Raw},
           {"history", lists:map(fun({Timestamp, Event}) ->
                                         [{"timestamp", Timestamp},
                                          {"event", Event}]
@@ -234,7 +227,21 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
            ]),
     %% TODO: parse response to proplist
     {ok, Res} =
-        mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>, [], 5000),
+        case ?BJ_MOCKED of
+            true ->
+                {ok,
+                 [
+                  {"t2-sighash-input-0",
+                   "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
+                  {"t2-sighash-input-1",
+                   "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
+                  {"t2-raw", "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}
+                 ]
+                 };
+            false ->
+                mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>,
+                                   [], 5000)
+        end,
     Res.
 
 pem_decode_bin(Bin) ->
