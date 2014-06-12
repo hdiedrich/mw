@@ -83,6 +83,7 @@ hr.in       { float: left;
             }
 
 .first      { text-align: left;
+              max-width: 5em;
             }
 
 .second     { text-align: center;

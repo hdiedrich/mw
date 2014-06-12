@@ -2,7 +2,9 @@
   <div class="block desc">
     <div class="headline desc">
       <div class="headline first">
-        $BET
+          <a href=prep/$EVENT_ID>      
+            $HEADLINE
+          </a>
       </div>
     </div>
   </div>
@@ -39,7 +41,7 @@
         $YES_BIDDER
       </div>
       <div class="feature pubkey midviz">
-        $YES_PUBKEY
+        $GIVER_EC_PUBKEY
       </div>
       <div class="smallprint hiviz">
         Put BTC $YES_AMOUNT in, get BTC $NO_AMOUNT out
@@ -51,7 +53,7 @@
         $NO_BIDDER
       </div>
       <div class="feature pubkey midviz">
-        $NO_PUBKEY
+        $TAKER_EC_PUBKEY
       </div>
       <div class="smallprint">
         Put BTC $NO_AMOUNT in, get BTC $YES_AMOUNT out
@@ -61,13 +63,13 @@
 
   <div class="block">
     <div class="feature oracle">
-      RealityKeys Oracle
+      $EVENT_PUBKEY
     </div>
   </div>
 
   <div class="block block_smallprint">
     <div class="smallprint">
-      $SMALLPRINT
+      $DESCRIPTION
     </div>
   </div>
 </div>
