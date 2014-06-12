@@ -42,6 +42,17 @@ insert_contract_event(ContractId, Event) ->
                            ])),
     ok.
 
+select_contract_infos() ->
+    Statement =
+        "SELECT e.id as event_id, e.match_no, e.headline, e.description, e.outcome, "
+        "       e.event_pubkey, c.giver_ec_pubkey, c.taker_ec_pubkey, "
+        "       c.t2_sighash_input_0, c.t2_sighash_input_1, t2_raw "
+        "FROM events e
+         JOIN contracts c ON e.id = c.event_id;",
+        mw_pg_lib:parse_select_result(
+                mw_pg_lib:equery(Statement, [])).
+
+
 select_contract_info(Id) ->
     Statement =
         "SELECT ce.time AT TIME ZONE 'UTC', ce.description "
@@ -222,6 +233,3 @@ insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
                                                              Params)),
     ok.
 
-%%%===========================================================================
-%%% Internal functions
-%%%===========================================================================

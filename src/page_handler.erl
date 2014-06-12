@@ -7,7 +7,7 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 11 June 2014                                              %%%
+%%% Changed     : 12 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -59,16 +59,18 @@ page(Req, State) ->
             <<"</body></html>\n">>],
     {HTML, Req, somepath}. %% TODO somepath?
 
+html(_Req, {bets}=_State) ->
+    Bin = block(bets),
+    {ok, Data} = mw_pg:select_contract_infos(),
+    merge(Bin, [{betlist, bets_html(Data)}]);
+
 html(_Req, {index}=State) ->
     {Block} = State,
-    Bin = block(Block),
-    Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
-    Bin2;
+    block(Block);
 
 html(_Req, {about}=State) ->
     {Block} = State,
     block(Block);
-
 
 html(_Req, {intro}=State) ->
     {Block} = State,
@@ -196,10 +198,28 @@ samples() ->
 merge(Template, []) ->
     Template;
 
-merge(Template, [{Tag, String} | Data]) ->
-    Search = "\\$" ++ string:to_upper(atom_to_list(Tag)),
+merge(Template, [{Tag, Value} | Data]) ->
+    Search = "\\$" ++ string:to_upper(to_list(Tag)),
+    String = to_list(Value),
+    io:format("search ~p~n", [Search]),
     Replaced = re:replace(Template, Search, String, [global, {return, list}]),
     merge(Replaced, Data).
+
+to_list(A) when is_list(A) ->
+    A;
+
+to_list(A) when is_atom(A) ->
+    atom_to_list(A);
+
+
+to_list(A) when is_atom(A) ->
+    atom_to_list(A);
+
+to_list(A) when is_binary(A) ->
+    binary_to_list(A);
+
+to_list(A) when is_integer(A) ->
+    integer_to_list(A).
 
 %% Placeholder for pages under construction
 placeholder(S) ->
