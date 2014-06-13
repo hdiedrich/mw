@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.3.x/web flow                                            %%%
+%%% Version     : 0.5.x/first round trip                                    %%%
 %%% File        : middle_server_app.erl                                     %%%
 %%% Description : main module, starting the Cowboy host                     %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 09 June 2014                                              %%%
+%%% Changed     : 12 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 %%%                                                                         %%%
 %%%  The AIX WC14 concept enables football bets on the Bitcoin blockchain   %%%
@@ -79,7 +79,7 @@ start(_Type, _Args) ->
                              {"/bets.html",     page_handler, {bets}},
                              {"/details.html",  page_handler, {details}},
                              {"/flow.html",     page_handler, {flow}},
-                             {"/prep.html",     page_handler, {prep}},
+                             {"/prep/:id",      page_handler, {prep}},
                              {"/pend.html",     page_handler, {pend}},
                              {"/sign.html",     page_handler, {sign}},
                              {"/followup.html", page_handler, {followup}},

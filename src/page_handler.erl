@@ -44,7 +44,8 @@ content_types_provided(Req, State) ->
 %% ----------------------------------------------------------------------------
 %% Page Creation
 %% ----------------------------------------------------------------------------
-%% assemble index.html
+
+%% assemble a page, generically: title, meta, header, footer
 page(Req, State) ->
     {Block} = State,
     Title = erlang:iolist_to_binary("AIX WC 14 - " ++ atom_to_list(Block)),
@@ -59,28 +60,27 @@ page(Req, State) ->
             <<"</body></html>\n">>],
     {HTML, Req, somepath}. %% TODO somepath?
 
+%% home page inner html
+html(_Req, {index}=State) ->
+    Bin = block(index),
+    {ok, Data} = mw_pg:select_contract_infos(),
+    merge(Bin, [{betlist, bets_html(Data)}]);
+
+%% bet list inner html
 html(_Req, {bets}=_State) ->
     Bin = block(bets),
     {ok, Data} = mw_pg:select_contract_infos(),
     merge(Bin, [{betlist, bets_html(Data)}]);
 
-html(_Req, {index}=State) ->
-    {Block} = State,
-    block(Block);
-
+%% about page inner html
 html(_Req, {about}=State) ->
     {Block} = State,
     block(Block);
 
+%% intro page inner html
 html(_Req, {intro}=State) ->
     {Block} = State,
     block(Block);
-
-html(_Req, {bets}=State) ->
-    {Block} = State,
-    Bin = block(Block),
-    Bin2 = merge(Bin, [{betlist, bets_html(samples())}]),
-    Bin2;
 
 html(_Req, {details}=State) ->
     {Block} = State,
@@ -90,9 +90,25 @@ html(_Req, {flow}=State) ->
     {Block} = State,
     block(Block);
 
-html(_Req, {prep}=State) ->
-    {Block} = State,
-    block(Block);
+%% first contract step, create keys, support T1; inner html
+html(Req, {prep}=_State) ->
+    {Id, _} = cowboy_req:binding(id, Req, none),
+    case Id of
+      none ->
+        "ID error";
+      _ ->
+        case mw_contract:get_contract_info(binary_to_integer(Id)) of
+          {ok, Props} ->
+            HTML = block(prep),
+            Headline = proplists:get_value("headline", Props, <<"?">>),
+            History = events_to_html(proplists:get_value("history", Props)),
+            merge(HTML,
+              [{headline, Headline},
+               {status, History},
+               {dump, prop_to_html(Props)}
+              ])
+        end
+    end;
 
 html(_Req, {pend}=State) ->
     {Block} = State,
