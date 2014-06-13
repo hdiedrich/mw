@@ -25,3 +25,8 @@ erl_crash.dump
 # Mac FS
 #
 .DS_Store
+
+#
+# misc
+#
+priv/bitcoin-tool
