@@ -45,7 +45,7 @@ PRIMARY KEY (fifa_match_number)
 
 CREATE TABLE IF NOT EXISTS events (
 id SERIAL,
-match_no int REFERENCES matches (fifa_match_number) NOT NULL,
+match_no int REFERENCES matches (fifa_match_number),
 headline text NOT NULL,
 description text NOT NULL,
 outcome boolean,

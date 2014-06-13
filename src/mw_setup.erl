@@ -3,12 +3,43 @@
 -compile(export_all).
 -export([run/0]).
 
+-include("log.hrl").
+
 %-define(WC, "football world cup 2014").
 -define(WC, "WC '14").
 
+%% ensure unique temp files for concurrent threads
+-define(SUFFIX, lists:flatten(string:tokens(pid_to_list(self()), "<>."))).
+
+%% mw_setup:insert_world_cup_events().
 insert_world_cup_events() ->
-    [F | WCEvents] = results(teams("teams.csv"), matches("matches.csv")),
-    todo.
+    erlang:put(count, 1),
+    Results = results(teams("setup/teams.csv"),
+                      matches("setup/matches.csv")),
+    Total = length(Results),
+    %% Quick hack to scale on 4 concurrent threads to saturate CPU for key gen
+    {PartA, PartB} = lists:split(Total div 2, Results),
+    {Part1, Part2} = lists:split(Total div 4, PartA),
+    {Part3, Part4} = lists:split(Total div 4, PartB),
+    Spawn =
+        fun(Part) -> spawn(fun() -> lists:map(fun insert_wc_event/1, Part) end)
+        end,
+    lists:foreach(Spawn, [Part1, Part2, Part3, Part4]),
+    ok.
+
+insert_wc_event({N, Headline, Detail}) ->
+    {ok, EventPriv, EventPub,
+     OracleYesPriv, OracleYesPub,
+     OracleNoPriv, OracleNoPub} = gen_keys(),
+    {ok, OracleKeysId} =
+        mw_pg:insert_oracle_keys(OracleNoPub, OracleNoPriv,
+                                 OracleYesPub, OracleYesPriv),
+    ok = mw_contract:create_event(null, Headline, Detail,
+                                  OracleKeysId,
+                                  EventPriv, EventPub),
+    ?info("~p Inserted oracle_keys & event ~p (~p)",
+          [self(), N, OracleKeysId]),
+    ok.
 
 gen_keys() ->
     {ok, OracleYesPriv, OracleYesPub} = gen_rsa_keypair(),
@@ -20,11 +51,12 @@ gen_keys() ->
 
 gen_ec_keypair() ->
     BitcoinTool = filename:join(code:priv_dir(middle_server), "bitcoin-tool"),
-    ECTempBytes = filename:join(code:priv_dir(middle_server), "ec_temp_bytes"),
+    ECTempBytes = filename:join(code:priv_dir(middle_server),
+                                "ec_temp_bytes_" ++ ?SUFFIX),
     ECPrivAbsPath = filename:join(code:priv_dir(middle_server),
-                                  "temp_setup_ec_privkey"),
+                                  "temp_setup_ec_privkey" ++ ?SUFFIX),
     ECPubAbsPath = filename:join(code:priv_dir(middle_server),
-                                 "temp_setup_ec_pubkey"),
+                                 "temp_setup_ec_pubkey" ++ ?SUFFIX),
 
     GenBytes = "openssl rand 32 > " ++ ECTempBytes,
     GenECPriv = BitcoinTool ++ " "
@@ -47,8 +79,7 @@ gen_ec_keypair() ->
 
     os:cmd(GenBytes),
     os:cmd(GenECPriv),
-    Res = os:cmd(GenECPub),
-    io:format("Res: ~p~n", [Res]),
+    os:cmd(GenECPub),
 
     {ok, ECPrivBin} = file:read_file(ECPrivAbsPath),
     {ok, ECPubBin} = file:read_file(ECPubAbsPath),
@@ -60,9 +91,9 @@ gen_ec_keypair() ->
 
 gen_rsa_keypair() ->
     RSAPrivAbsPath = filename:join(code:priv_dir(middle_server),
-                                   "temp_setup_rsa_privkey.pem"),
+                                   "temp_setup_rsa_privkey.pem_" ++ ?SUFFIX),
     RSAPubAbsPath = filename:join(code:priv_dir(middle_server),
-                                  "temp_setup_rsa_pubkey.pem"),
+                                  "temp_setup_rsa_pubkey.pem_" ++ ?SUFFIX),
     GenRSAPriv = "openssl genrsa -out " ++ RSAPrivAbsPath ++ " 2048",
     GenRSAPub  = "openssl rsa -in " ++ RSAPrivAbsPath ++
         " -pubout > " ++ RSAPubAbsPath,
@@ -296,3 +327,10 @@ write(ID, Bytes) ->
     ok = file:write_file(AbsPath, Bytes),
     ok.
     %% io:format("Write ~w ~w bytes~n", [Filename, byte_size(Bytes)]).
+
+intervals(Start, Stop, _) when Start > Stop ->
+    [];
+intervals(Start, Stop, N) when Start == Stop; (Start + N) > Stop ->
+    [{Start, Stop}];
+intervals(Start, Stop, N) ->
+    [{Start, Start + N} | intervals(Start + N + 1, Stop, N)].
