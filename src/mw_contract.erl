@@ -156,7 +156,8 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
-create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) ->
+create_event(MatchNum, Headline, Desc, OracleKeysId,
+             EventPrivKey, EventPubKey) ->
     {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
     {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
     {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
@@ -164,7 +165,7 @@ create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey)
         hybrid_aes_rsa_enc(EventPrivKey, NoPubKey),
     EventPrivKeyEncWithOracleYesKey =
         hybrid_aes_rsa_enc(EventPrivKey, YesPubKey),
-    ok = mw_pg:insert_event(1, Headline, Desc, OracleKeysId, EventPubKey,
+    ok = mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
                             EventPrivKeyEncWithOracleNoKey,
                             EventPrivKeyEncWithOracleYesKey),
     ok.
