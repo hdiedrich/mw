@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.1.x/initial spike                                       %%%
+%%% Version     : 0.6.x/json calls                                          %%%
 %%% File        : api_handler.erl                                           %%%
 %%% Description : json response generation, as a handler for Cowboy         %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 29 May 2014                                               %%%
-%%% Changed     : 30 May 2014                                               %%%
+%%% Changed     : 14 Jun 2014                                               %%%
 %%%-------------------------------------------------------------------------%%%
 -module(api_handler).
 
@@ -38,12 +38,19 @@ allowed_methods(Req, State) ->
 resource_exists(Req, State) ->
     {true, Req, State}.
 
+content_types_accepted(Req, State) ->
+        {[{{<<"application">>, <<"json">>, []}, handle_post}
+    ], Req, State}.
+
 content_types_provided(Req, State) ->
     {[
-      {{<<"application">>, <<"json">>, []}, response},
-      {{<<"text">>, <<"plain">>, []}, response},
-      {{<<"text">>, <<"html">>, []}, response}
+      {{<<"application">>, <<"json">>, '*'}, response},
+      {{<<"text">>, <<"plain">>, '*'}, response},
+      {{<<"text">>, <<"html">>, '*'}, response}
      ], Req, State}.
+
+handle_post(Req, State) ->
+    {true, Req, State}.
 
 %% ----------------------------------------------------------------------------
 %% Responses
@@ -79,7 +86,11 @@ response(Req, 'enter-contract'=State) ->
         end,
     JSON = handle_response(HandleFun),
     ?info("Respone JSON: ~p", [JSON]),
-    {JSON, Req, State};
+
+    %% allow access from other port - actually from anywhere
+    Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
+                                      <<"*">>, Req),
+    {JSON, Req1, State};
 
 response(Req, 'clone-contract'=State) ->
     HandleFun =
