@@ -153,8 +153,8 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %%api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
     %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
     %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
-    ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
-    ok.
+    {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
+    {ok, Id}.
 
 create_event(MatchNum, Headline, Desc, OracleKeysId,
              EventPrivKey, EventPubKey) ->
@@ -278,23 +278,26 @@ hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
 %%%===========================================================================
 %% mw_contract:manual_test_1().
 manual_test_1() ->
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_privkey.pem")),
+    {ok, _Id} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_privkey.pem")),
 
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_privkey.pem")),
+    {ok, _Id2} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_privkey.pem")),
 
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
+    {ok, _Id3} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
 
     ok = create_event(1, "Brazil beats Croatia", "More foo info", 1,
                       mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
