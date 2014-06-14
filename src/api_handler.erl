@@ -39,7 +39,7 @@ resource_exists(Req, State) ->
     {true, Req, State}.
 
 content_types_accepted(Req, State) ->
-        {[{{<<"application">>, <<"json">>, []}, handle_post}
+        {[{{<<"application">>, <<"json">>, '*'}, handle_post}
     ], Req, State}.
 
 content_types_provided(Req, State) ->
@@ -72,6 +72,7 @@ response(Req, 'bet-list'=State) ->
     {JSON, Req, State};
 
 response(Req, 'enter-contract'=State) ->
+    io:format("Respone ...", []),
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
@@ -82,15 +83,16 @@ response(Req, 'enter-contract'=State) ->
                   {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(Body),
                 Response = mw_contract:enter_contract(ContractId, ECPubKey, RSAPubKey),
                 ?info("Respone: ~p", [Response]),
+                io:format("Respone: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
     ?info("Respone JSON: ~p", [JSON]),
 
     %% allow access from other port - actually from anywhere
-    Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
-                                      <<"*">>, Req),
-    {JSON, Req1, State};
+    % Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
+    %                                  <<"'*'">>, Req),
+    {JSON, Req, State};
 
 response(Req, 'clone-contract'=State) ->
     HandleFun =
