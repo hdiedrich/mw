@@ -1,0 +1,32 @@
+<h3>JS JSON Call Test</h3>
+
+  <p>
+  Using jQuery 1.11.1
+  </p>
+
+  <script type="text/javascript" src="/jquery/jquery-1.11.1.min.js"></script>
+
+  <div id=result name=result>
+    [ Something else should appear here. ]
+  </div>
+
+  <script>
+
+    $( "#result" ).load( "/hello.html" );
+  
+  </script>
+
+  <div id=result2 name=result2>
+    [ Something else should appear here. ]
+  </div>
+
+  <script>
+
+  $.ajax({
+         url: "http://localhost/hello.html",
+         type: "GET",
+         beforeSend: function(xhr){xhr.setRequestHeader('Access-Control-Allow-Origin', '*');},
+         success: function() { alert('Success!' + authHeader); }
+      });
+      
+  </script>
