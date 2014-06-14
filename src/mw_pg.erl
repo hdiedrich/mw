@@ -175,12 +175,13 @@ insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     Statement =
         "INSERT INTO oracle_keys "
         "(rsa_no_pubkey, rsa_no_privkey, rsa_yes_pubkey, rsa_yes_privkey) "
-        "VALUES ($1, $2, $3, $4);",
+        "VALUES ($1, $2, $3, $4) "
+        "RETURNING id;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
                        [NoPubKey, NoPrivKey, YesPubKey, YesPrivKey]),
-    {ok, _} =
+    {ok, [{<<"id">>, NewId}]} =
         mw_pg_lib:parse_insert_result(mw_pg_lib:equery(Statement, Params)),
-    ok.
+    {ok, NewId}.
 
 select_oracle_keys(_Id) ->
     Statement =
@@ -232,4 +233,3 @@ insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
     {ok, _} = mw_pg_lib:parse_insert_result(mw_pg_lib:equery(Statement,
                                                              Params)),
     ok.
-

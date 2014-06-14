@@ -1,56 +1,160 @@
--module(setup).
+-module(mw_setup).
 
+-compile(export_all).
 -export([run/0]).
+
+-include("log.hrl").
 
 %-define(WC, "football world cup 2014").
 -define(WC, "WC '14").
 
+%% ensure unique temp files for concurrent threads
+-define(SUFFIX, lists:flatten(string:tokens(pid_to_list(self()), "<>."))).
+
+%% mw_setup:insert_world_cup_events().
+insert_world_cup_events() ->
+    erlang:put(count, 1),
+    Results = results(teams("setup/teams.csv"),
+                      matches("setup/matches.csv")),
+    Total = length(Results),
+    %% Quick hack to scale on 4 concurrent threads to saturate CPU for key gen
+    {PartA, PartB} = lists:split(Total div 2, Results),
+    {Part1, Part2} = lists:split(Total div 4, PartA),
+    {Part3, Part4} = lists:split(Total div 4, PartB),
+    Spawn =
+        fun(Part) -> spawn(fun() -> lists:map(fun insert_wc_event/1, Part) end)
+        end,
+    lists:foreach(Spawn, [Part1, Part2, Part3, Part4]),
+    ok.
+
+insert_wc_event({N, Headline, Detail}) ->
+    {ok, EventPriv, EventPub,
+     OracleYesPriv, OracleYesPub,
+     OracleNoPriv, OracleNoPub} = gen_keys(),
+    {ok, OracleKeysId} =
+        mw_pg:insert_oracle_keys(OracleNoPub, OracleNoPriv,
+                                 OracleYesPub, OracleYesPriv),
+    ok = mw_contract:create_event(null, Headline, Detail,
+                                  OracleKeysId,
+                                  EventPriv, EventPub),
+    ?info("~p Inserted oracle_keys & event ~p (~p)",
+          [self(), N, OracleKeysId]),
+    ok.
+
+gen_keys() ->
+    {ok, OracleYesPriv, OracleYesPub} = gen_rsa_keypair(),
+    {ok, OracleNoPriv, OracleNoPub}   = gen_rsa_keypair(),
+    {ok, EventPriv, EventPub}         = gen_ec_keypair(),
+    {ok, EventPriv, EventPub,
+     OracleYesPriv, OracleYesPub,
+     OracleNoPriv, OracleNoPub}.
+
+gen_ec_keypair() ->
+    BitcoinTool = filename:join(code:priv_dir(middle_server), "bitcoin-tool"),
+    ECTempBytes = filename:join(code:priv_dir(middle_server),
+                                "ec_temp_bytes_" ++ ?SUFFIX),
+    ECPrivAbsPath = filename:join(code:priv_dir(middle_server),
+                                  "temp_setup_ec_privkey" ++ ?SUFFIX),
+    ECPubAbsPath = filename:join(code:priv_dir(middle_server),
+                                 "temp_setup_ec_pubkey" ++ ?SUFFIX),
+
+    GenBytes = "openssl rand 32 > " ++ ECTempBytes,
+    GenECPriv = BitcoinTool ++ " "
+        "--network bitcoin-testnet "
+        "--input-type private-key "
+        "--input-format raw "
+        "--input-file " ++ ECTempBytes ++ " "
+        "--output-type private-key "
+        "--output-format base58check "
+        "--public-key-compression compressed > " ++ ECPrivAbsPath,
+
+    GenECPub = BitcoinTool ++ " "
+        "--network bitcoin-testnet "
+        "--input-type private-key "
+        "--input-format raw "
+        "--input-file " ++ ECTempBytes ++ " "
+        "--output-type public-key "
+        "--output-format base58check "
+        "--public-key-compression compressed > " ++ ECPubAbsPath,
+
+    os:cmd(GenBytes),
+    os:cmd(GenECPriv),
+    os:cmd(GenECPub),
+
+    {ok, ECPrivBin} = file:read_file(ECPrivAbsPath),
+    {ok, ECPubBin} = file:read_file(ECPubAbsPath),
+
+    ok = file:delete(ECTempBytes),
+    ok = file:delete(ECPrivAbsPath),
+    ok = file:delete(ECPubAbsPath),
+    {ok, ECPrivBin, ECPubBin}.
+
+gen_rsa_keypair() ->
+    RSAPrivAbsPath = filename:join(code:priv_dir(middle_server),
+                                   "temp_setup_rsa_privkey.pem_" ++ ?SUFFIX),
+    RSAPubAbsPath = filename:join(code:priv_dir(middle_server),
+                                  "temp_setup_rsa_pubkey.pem_" ++ ?SUFFIX),
+    GenRSAPriv = "openssl genrsa -out " ++ RSAPrivAbsPath ++ " 2048",
+    GenRSAPub  = "openssl rsa -in " ++ RSAPrivAbsPath ++
+        " -pubout > " ++ RSAPubAbsPath,
+    os:cmd(GenRSAPriv),
+    os:cmd(GenRSAPub),
+    {ok, RSAPrivBin} = file:read_file(RSAPrivAbsPath),
+    {ok, RSAPubBin} = file:read_file(RSAPubAbsPath),
+    ok = file:delete(RSAPrivAbsPath),
+    ok = file:delete(RSAPubAbsPath),
+    {ok, RSAPrivBin, RSAPubBin}.
+
 %% server initialization: read file and test (it could have been changed).
 run() ->
-    io:format("start~n"),
+    %% io:format("start~n"),
     erlang:put(count, 1),
     write("index", <<"hello">>),
     results(teams("teams.csv"), matches("matches.csv")).
 
 %% read and store the interval tuples, create tree.
 matches(Filename) ->
-    io:format("read: ", []),
-    {ok, B} = file:read_file(Filename),
-    io:format("~w bytes~n", [byte_size(B)]),
+    %% io:format("read: ", []),
+    AbsPath = filename:join(code:priv_dir(middle_server), Filename),
+    {ok, B} = file:read_file(AbsPath),
+    %% io:format("~w bytes~n", [byte_size(B)]),
 
-    io:format("grep: ", []),
+    %% io:format("grep: ", []),
     %% number, date, hour, home, guest, stage, headline, description
     {match, Strings} =
         re:run(B,"([^,]+), *([^,]+), *([^,]+), *([^,]+), *([^,]+), *([^,]+), *([^,]+), *(.+)\\n?",
             [global, {capture, all_but_first, list}]),
-    io:format("~w matches~n", [length(Strings)]),
+    %% io:format("~w matches~n", [length(Strings)]),
 
-    io:format("list matches~n", []),
-    [ io:format("#~s ~s ~s~n", [_Number, _Stage, _Headline])
-    ||  [_Number, _Date, _Hour, _Home, _Guest, _Stage, _Headline, _Description]
+    %% io:format("list matches~n", []),
+    [
+     %% io:format("#~s ~s ~s~n", [_Number, _Stage, _Headline])
+     ok
+     ||  [_Number, _Date, _Hour, _Home, _Guest, _Stage, _Headline, _Description]
         <- Strings ],
     Strings.
 
 teams(Filename) ->
-    io:format("read teams: ", []),
-    {ok, B} = file:read_file(Filename),
-    io:format("~w bytes~n", [byte_size(B)]),
+    %% io:format("read teams: ", []),
+    AbsPath = filename:join(code:priv_dir(middle_server), Filename),
+    {ok, B} = file:read_file(AbsPath),
+    %% io:format("~w bytes~n", [byte_size(B)]),
 
-    io:format("grep teams: ", []),
+    %% io:format("grep teams: ", []),
     %% country, points
     {match, Strings} =
         re:run(B,"([^,]+), *(.+)\\n?",
             [global, {capture, all_but_first, list}]),
-    io:format("~w teams~n", [length(Strings)]),
+    %% io:format("~w teams~n", [length(Strings)]),
 
-    io:format("list teams~n", []),
-    [ io:format("~s (group ~s)~n", Rec) ||  Rec <- Strings ],
+    %% io:format("list teams~n", []),
+    %% [ io:format("~s (group ~s)~n", Rec) ||  Rec <- Strings ],
 
     Strings.
 
 results(Teams, Matches) ->
 
-    io:format("create ...~n", []),
+    %% io:format("create ...~n", []),
 
     Offers = lists:flatten(
         [ [ results(Rec) ||  Rec <- Matches ],
@@ -73,14 +177,19 @@ results(Teams, Matches) ->
           [ runnerup(Team) ||  Team <- Teams ],
           [ third(Team) ||  Team <- Teams ]]),
 
-    io:format("~p offers~n", [length(Offers)]),
-    io:format("sort ...~n", []),
+    %% io:format("~p offers~n", [length(Offers)]),
+    %% io:format("sort ...~n", []),
     Sorted = lists:keysort(1, Offers),
 
-    [ io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
+    [
+     %% io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
+     ok
     || {Number, Prio, Headline, Detail} <- Sorted ],
 
-    ok.
+    [ {Number,
+       lists:flatten(Headline),
+       lists:flatten(Detail)}
+      || {Number, Prio, Headline, Detail} <- Sorted ].
 
 results(Rec) ->
     [ result("beat", Rec, i),
@@ -214,5 +323,14 @@ count() ->
 
 write(ID, Bytes) ->
     Filename = "site/" ++ ID ++ ".html",
-    ok = file:write_file(Filename, Bytes),
-    io:format("Write ~w ~w bytes~n", [Filename, byte_size(Bytes)]).
+    AbsPath = filename:join(code:priv_dir(middle_server), Filename),
+    ok = file:write_file(AbsPath, Bytes),
+    ok.
+    %% io:format("Write ~w ~w bytes~n", [Filename, byte_size(Bytes)]).
+
+intervals(Start, Stop, _) when Start > Stop ->
+    [];
+intervals(Start, Stop, N) when Start == Stop; (Start + N) > Stop ->
+    [{Start, Stop}];
+intervals(Start, Stop, N) ->
+    [{Start, Start + N} | intervals(Start + N + 1, Stop, N)].

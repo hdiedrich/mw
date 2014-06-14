@@ -30,6 +30,7 @@
 -define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
+-define(BJ_MOCKED, true).
 -define(BJ_REQUEST_URL, <<"http://localhost/get-unsigned-t2">>).
 -define(BJ_REQUEST_TIMEOUT, 5000).
 
@@ -70,12 +71,10 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but
 %%% which may be exposed as JSON API later on
 %%%===========================================================================
-
-
 %% For MVP #2 this can be used for pages: prep, pend, sign and status
 get_contract_signing_state(Id) ->
     {ok, Info}  = get_contract_info(Id),
-    GetInfo         = ?GET(Info),
+    GetInfo     = ?GET(Info),
     History     = GetInfo("history"),
     EventPubKey = GetInfo("event_pubkey"),
     GiverPubKey = GetInfo("giver_ec_pubkey"),
@@ -104,13 +103,7 @@ get_contract_signing_state(Id) ->
                                                T2SigHashInput1, T2Raw),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_GIVER_T1),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_TAKER_T1),
-                    NewStuff = [{"t2_sighash_input_0", T2SigHashInput0},
-                                {"t2_sighash_input_1", T2SigHashInput1},
-                                {"t2_raw", T2Raw}],
-                    NewInfo =
-                        lists:foldl(fun({K,V}, TL) ->
-                                            lists:keyreplace(K, 1, TL, {K,V})
-                                    end, Info, NewStuff),
+                    NewInfo = get_contract_info(Id),
                     {ok, NewInfo};
                 _ErrorMsg ->
                     %% No t2 / sighashes from Bj: no T1 outputs available; unchanged state
@@ -135,9 +128,9 @@ get_contract_info(Id) ->
           {"event_pubkey", EventPubKey},
           {"giver_ec_pubkey", GiverECPubKey},
           {"taker_ec_pubkey", TakerECPubKey},
-          {<<"t2_sighash_input_0">>, T2SigHashInput0},
-          {<<"t2_sighash_input_1">>, T2SigHashInput1},
-          {<<"t2_raw">>, T2Raw},
+          {"t2_sighash_input_0", T2SigHashInput0},
+          {"t2_sighash_input_1", T2SigHashInput1},
+          {"t2_raw", T2Raw},
           {"history", lists:map(fun({Timestamp, Event}) ->
                                         [{"timestamp", Timestamp},
                                          {"event", Event}]
@@ -163,7 +156,8 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
     ok.
 
-create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey) ->
+create_event(MatchNum, Headline, Desc, OracleKeysId,
+             EventPrivKey, EventPubKey) ->
     {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
     {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
     {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
@@ -171,7 +165,7 @@ create_event(_MatchNum, Headline, Desc, OracleKeysId, EventPrivKey, EventPubKey)
         hybrid_aes_rsa_enc(EventPrivKey, NoPubKey),
     EventPrivKeyEncWithOracleYesKey =
         hybrid_aes_rsa_enc(EventPrivKey, YesPubKey),
-    ok = mw_pg:insert_event(1, Headline, Desc, OracleKeysId, EventPubKey,
+    ok = mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
                             EventPrivKeyEncWithOracleNoKey,
                             EventPrivKeyEncWithOracleYesKey),
     ok.
@@ -234,7 +228,21 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
            ]),
     %% TODO: parse response to proplist
     {ok, Res} =
-        mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>, [], 5000),
+        case ?BJ_MOCKED of
+            true ->
+                {ok,
+                 [
+                  {"t2-sighash-input-0",
+                   "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
+                  {"t2-sighash-input-1",
+                   "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
+                  {"t2-raw", "A1EFFEC100000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}
+                 ]
+                 };
+            false ->
+                mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>,
+                                   [], 5000)
+        end,
     Res.
 
 pem_decode_bin(Bin) ->
@@ -270,13 +278,37 @@ hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
 %%%===========================================================================
 %% mw_contract:manual_test_1().
 manual_test_1() ->
-    ok = create_oracle_keys(rsa_key_from_file("test_keys/oracle_no_pubkey.pem"),
-                            rsa_key_from_file("test_keys/oracle_no_privkey.pem"),
-                            rsa_key_from_file("test_keys/oracle_yes_pubkey.pem"),
-                            rsa_key_from_file("test_keys/oracle_yes_privkey.pem")),
+    ok = create_oracle_keys(
+           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_privkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_privkey.pem")),
+
+    ok = create_oracle_keys(
+           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_privkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_privkey.pem")),
+
+    ok = create_oracle_keys(
+           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_privkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
+           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
+
     ok = create_event(1, "Brazil beats Croatia", "More foo info", 1,
                       mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
                       mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+
+    ok = create_event(1, "Croatia beats Brazil", "More foo info", 2,
+                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+
+    ok = create_event(1, "Match is invaded by aliens", "More foo info", 3,
+                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+
+
     ok.
 
 manual_test_2() ->

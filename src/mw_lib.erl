@@ -16,6 +16,11 @@
 
 -define(DEFAULT_REQUEST_TIMEOUT, 5000).
 
+-define(B58_ALPHABET,
+        "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz").
+-define(B58_BASE, length(?B58_ALPHABET)).
+-define(ALPHABET_CODE(Num), lists:nth((Num rem ?B58_BASE) + 1, ?B58_ALPHABET)).
+
 %%%===========================================================================
 %%% API
 %%%===========================================================================
@@ -28,6 +33,13 @@ bin_to_hex(B) when is_binary(B) ->
                                 1 -> [$0|S];
                                 2 -> S
                             end))/bytes>> || <<I>> <= B>>.
+
+b58_enc(S) when is_list(S)   -> b58_enc(binary:list_to_bin(S));
+b58_enc(B) when is_binary(B) -> b58_enc(binary:decode_unsigned(B), []).
+b58_enc(Num, Acc) when Num < ?B58_BASE ->
+   [?ALPHABET_CODE(Num) | Acc];
+b58_enc(Num, Acc) ->
+   b58_enc(Num div ?B58_BASE, [?ALPHABET_CODE(Num) | Acc]).
 
 datetime_to_iso_timestamp({Date, {H, Min, Sec}}) when is_float(Sec) ->
     %% TODO: proper support for milliseconds

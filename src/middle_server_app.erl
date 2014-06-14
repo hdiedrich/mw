@@ -31,7 +31,7 @@ start(_Type, _Args) ->
     application:load(mw),
     application:set_env(mw, pools,
                         [
-                         {pgsql_pool, [{size, 1}, {max_overflow, 1}],
+                         {pgsql_pool, [{size, 4}, {max_overflow, 4}],
                           [
                            {host, "localhost"},
                            {dbname, "mw"},
