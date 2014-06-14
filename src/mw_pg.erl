@@ -171,6 +171,18 @@ update_contract(Id, T2SigHashInput0, T2SigHashInput1, T2Raw) ->
                 mw_pg_lib:equery(Statement, Params)),
     ok.
 
+%% Update t2 raw after adding one signature to it
+update_contract(Id, T2Raw) ->
+    Statement =
+        "UPDATE contracts SET "
+        "t2_raw = $1 "
+        "WHERE id = $2;",
+    Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
+                       [T2Raw, Id]),
+    {ok, _} = mw_pg_lib:parse_insert_result(
+                mw_pg_lib:equery(Statement, Params)),
+    ok.
+
 insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     Statement =
         "INSERT INTO oracle_keys "

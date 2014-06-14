@@ -31,7 +31,8 @@
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
 -define(BJ_MOCKED, true).
--define(BJ_REQUEST_URL, <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_URL_GET_UNSIGNED_T2,     <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_URL_SUBMIT_T2_SIGNATURE, <<"http://localhost/submit-t2-signature">>).
 -define(BJ_REQUEST_TIMEOUT, 5000).
 
 %%%===========================================================================
@@ -55,16 +56,45 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p",
           [ContractId, ECPubKey]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
-    api_validation(is_binary(ECPubKey), ?PUBKEY_TYPE),
+    api_validation(is_binary(ECPubKey) andalso
+                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
+                   ?PUBKEY_TYPE),
     %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
     %% always 65 bytes == 130 hex digits
     api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
 
-    api_validation(is_binary(RSAPubKey), ?PUBKEY_TYPE),
+    api_validation(is_binary(RSAPubKey) andalso
+                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
+                   ?PUBKEY_TYPE),
     %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
     api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
+    [{"success-message", "ok"}].
+
+submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
+    ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubKey: ~p, "
+          "T2Signature: ~p",
+          [ContractId, ECPubKey, T2Signature]),
+
+    api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
+    api_validation(is_binary(ECPubKey) andalso
+                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)), ?PUBKEY_TYPE),
+    %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
+    %% always 65 bytes == 130 hex digits
+    api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
+
+    api_validation(is_binary(T2Signature) andalso
+                   is_binary(catch mw_lib:hex_to_bin(T2Signature)),
+                   ?SIGNATURE_TYPE),
+    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% TODO: verify! Can it also be shorter?
+    SignSize = byte_size(T2Signature),
+    api_validation(SignSize == 73 orelse
+                   SignSize == 72 orelse
+                   SignSize == 71, ?SIGNATURE_LEN),
+
+    ok = do_submit_t2_signature(ContractId, ECPubKey, T2Signature),
     [{"success-message", "ok"}].
 
 %%%===========================================================================
@@ -203,6 +233,27 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
     ok.
 
+do_submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
+    %% validate contract event states? e.g. duplicated signing reqs
+    GiverOrTaker = case mw_pg:select_contract_ec_pubkeys(ContractId) of
+                       {ok, ECPubKey, _} -> <<"giver">>;
+                       {ok, _, ECPubKey} -> <<"taker">>;
+                       {ok, _, _}        -> ?API_ERROR(?EC_PUBKEY_MISMATCH)
+                   end,
+    {ok, Info} = get_contract_info(ContractId),
+    T2Raw = proplists:get_value("t2_raw", Info),
+    ReqRes =
+        bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker),
+    %% TODO: handle returned new t2 hash?
+    NewT2 = proplists:get_value("t2-raw-partially-signed", ReqRes),
+    ok = mw_pg:update_contract(ContractId, NewT2),
+    EnteredEvent = case GiverOrTaker of
+                       <<"giver">> -> ?STATE_DESC_GIVER_SIGNED_T2;
+                       <<"taker">> -> ?STATE_DESC_TAKER_SIGNED_T2
+                   end,
+    ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
+    ok.
+
 api_validation(false, APIError) -> ?API_ERROR(APIError);
 api_validation(true, _) -> continue.
 
@@ -240,8 +291,37 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
                  ]
                  };
             false ->
-                mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>,
-                                   [], 5000)
+                mw_lib:bj_http_req(<<?BJ_URL_GET_UNSIGNED_T2/binary,
+                                     $?, QS/binary>>, [], 5000)
+        end,
+    Res.
+
+bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker) ->
+    QS = cow_qs:qs(
+           [
+            {<<"t2-signature">>, T2Signature},
+            {<<"t2-raw">>, T2Raw},
+            {<<"pubkey">>, ECPubKey},
+            {<<"sign-for">>, GiverOrTaker}
+           ]),
+    %% TODO: parse response to proplist
+    {ok, Res} =
+        case ?BJ_MOCKED of
+            true ->
+                {ok,
+                 [
+                  {"new-t2-hash",
+                   "A1EFFEC100000000FFFF"},
+                  {"t2-raw-partially-signed",
+                   "A1EFFEC100000000FFFFFF"}
+                  %% TODO
+                  %% {"t2-broadcasted",
+                  %% "A1EFFEC100000000FFFFFFFF"}
+                 ]
+                 };
+            false ->
+                mw_lib:bj_http_req(<<?BJ_URL_SUBMIT_T2_SIGNATURE/binary,
+                                     $?, QS/binary>>, [], 5000)
         end,
     Res.
 

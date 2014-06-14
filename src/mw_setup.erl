@@ -17,14 +17,21 @@ insert_world_cup_events() ->
     Results = results(teams("setup/teams.csv"),
                       matches("setup/matches.csv")),
     Total = length(Results),
-    %% Quick hack to scale on 4 concurrent threads to saturate CPU for key gen
-    {PartA, PartB} = lists:split(Total div 2, Results),
-    {Part1, Part2} = lists:split(Total div 4, PartA),
-    {Part3, Part4} = lists:split(Total div 4, PartB),
+    %% Quick hack to scale up concurrency a bit as CPU for key gen is bottleneck
+    {Part1, Rest1} = lists:split(Total div 6, Results),
+    {Part2, Rest2} = lists:split(Total div 6, Rest1),
+    {Part3, Rest3} = lists:split(Total div 6, Rest2),
+    {Part4, Rest4} = lists:split(Total div 6, Rest3),
+    {Part5, Part6} = lists:split(Total div 6, Rest4),
     Spawn =
-        fun(Part) -> spawn(fun() -> lists:map(fun insert_wc_event/1, Part) end)
+        fun(Part) -> spawn(fun() ->
+                                   erlang:put(mw_event_count, Total),
+                                   lists:map(fun insert_wc_event/1, Part)
+                           end)
         end,
-    lists:foreach(Spawn, [Part1, Part2, Part3, Part4]),
+    lists:foreach(Spawn, [
+                          Part1, Part2, Part3, Part4, Part5, Part6
+                         ]),
     ok.
 
 insert_wc_event({N, Headline, Detail}) ->
@@ -37,14 +44,28 @@ insert_wc_event({N, Headline, Detail}) ->
     ok = mw_contract:create_event(null, Headline, Detail,
                                   OracleKeysId,
                                   EventPriv, EventPub),
-    ?info("~p Inserted oracle_keys & event ~p (~p)",
-          [self(), N, OracleKeysId]),
+    Total = erlang:get(mw_event_count),
+    ?info("~p Inserted oracle_keys & event ~p (~s %)",
+          [self(), OracleKeysId,
+           io_lib:format("~.2f", [(OracleKeysId / Total) * 100])]),
     ok.
 
 gen_keys() ->
+    %% Experiment to block for quality entropy bits from /dev/random on Linux
+    %% Turned out to take WAY too long to get enough bits to generate keys for
+    %% all the bets.
+    %% TODO: figure out if we can generate keys with this in a timely manner by
+    %% adding enough entropy to Linux:
+    %% TMPRandFile = "/tmp/mw_openssl_rand_file",
+    %% SetOpenSSLRandFile =
+    %%    "dd if=/dev/random bs=1 count=1024 of=" ++ TMPRandFile ++ "; "
+    %%    "export RANDFILE=" ++ TMPRandFile,
+    %% os:cmd(SetOpenSSLRandFile),
+
     {ok, OracleYesPriv, OracleYesPub} = gen_rsa_keypair(),
     {ok, OracleNoPriv, OracleNoPub}   = gen_rsa_keypair(),
     {ok, EventPriv, EventPub}         = gen_ec_keypair(),
+
     {ok, EventPriv, EventPub,
      OracleYesPriv, OracleYesPub,
      OracleNoPriv, OracleNoPub}.
