@@ -23,6 +23,7 @@
         {applications, [
                 kernel,
                 stdlib,
+                runtime_tools,
                 lager,
                 crypto,
                 cowboy,
