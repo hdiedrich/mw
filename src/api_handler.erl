@@ -93,6 +93,23 @@ response(Req, 'clone-contract'=State) ->
         end,
     JSON = handle_response(HandleFun),
     ?info("Respone JSON: ~p", [JSON]),
+    {JSON, Req, State};
+
+response(Req, 'submit-t2-signature'=State) ->
+    HandleFun =
+        fun() ->
+                ?info("Req: ~p State:~p", [Req, State]),
+                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                ContractId = erlang:list_to_integer(binary:bin_to_list(ContractId0)),
+                {ok, Body, _Req1} = cowboy_req:body(Req),
+                {[{<<"ec_pubkey">>, ECPubKey},
+                  {<<"t2_signature">>, T2Signature}]} = jiffy:decode(Body),
+                Response = mw_contract:submit_t2_signature(ContractId, ECPubKey, T2Signature),
+                ?info("Respone: ~p", [Response]),
+                Response
+        end,
+    JSON = handle_response(HandleFun),
+    ?info("Respone JSON: ~p", [JSON]),
     {JSON, Req, State}.
 
 %% Single, top-level try catch to ensure we return correct JSON error code / msg
