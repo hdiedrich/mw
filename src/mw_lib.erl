@@ -13,6 +13,7 @@
 -export([]). %% TODO: remove export_all and add API exports
 
 -include("log.hrl").
+-include_lib("proper/include/proper.hrl").
 
 -define(DEFAULT_REQUEST_TIMEOUT, 5000).
 
@@ -34,12 +35,43 @@ bin_to_hex(B) when is_binary(B) ->
                                 2 -> S
                             end))/bytes>> || <<I>> <= B>>.
 
-b58_enc(S) when is_list(S)   -> b58_enc(binary:list_to_bin(S));
-b58_enc(B) when is_binary(B) -> b58_enc(binary:decode_unsigned(B), []).
-b58_enc(Num, Acc) when Num < ?B58_BASE ->
-   [?ALPHABET_CODE(Num) | Acc];
-b58_enc(Num, Acc) ->
-   b58_enc(Num div ?B58_BASE, [?ALPHABET_CODE(Num) | Acc]).
+enc_b58(S) when is_list(S)   -> enc_b58(binary:list_to_bin(S));
+enc_b58(<<>>)                -> <<>>;
+enc_b58(B) when is_binary(B) -> enc_b58(binary:decode_unsigned(B), <<>>).
+enc_b58(Num, Acc) when Num < ?B58_BASE ->
+    <<(?ALPHABET_CODE(Num)), Acc/binary>>;
+enc_b58(Num, Acc) ->
+    enc_b58(Num div ?B58_BASE, <<(?ALPHABET_CODE(Num)), Acc/binary>>).
+
+dec_b58(S) when is_list(S) ->
+    dec_b58(binary:list_to_bin(S));
+dec_b58(<<>>) -> <<>>;
+dec_b58(B) when is_binary(B) ->
+    dec_b58(bin_rev(B), 1, 0).
+
+dec_b58(<<>>, _Pow, Num) ->
+    binary:encode_unsigned(Num);
+dec_b58(<<C, Rest/binary>>, Pow, Num) ->
+    NotEqual = fun(E) when E /= C-> true; (_) -> false end,
+    case pos_in_list(C, ?B58_ALPHABET) of
+        {error, _} ->
+            {error, invalid_base58};
+        Pos ->
+            dec_b58(Rest, Pow * ?B58_BASE, Num + (Pow * (Pos - 1)))
+    end.
+
+bin_rev(Bin) -> bin_rev(Bin, <<>>).
+bin_rev(<<>>, Acc) -> Acc;
+bin_rev(<<H:1/binary, Rest/binary>>, Acc) -> %% binary concatenation is fastest?
+    bin_rev(Rest, <<H/binary, Acc/binary>>).
+
+pos_in_list(E, L) when is_list(L) ->
+    pos_in_list_aux(E, L, 1).
+
+pos_in_list_aux(E, [E|_], Pos) -> Pos;
+pos_in_list_aux(E, [_|T], Pos) -> pos_in_list_aux(E, T, Pos + 1);
+pos_in_list_aux(_E, [], _Pos) -> {error, not_in_list}.
+
 
 datetime_to_iso_timestamp({Date, {H, Min, Sec}}) when is_float(Sec) ->
     %% TODO: proper support for milliseconds
@@ -49,8 +81,10 @@ datetime_to_iso_timestamp({{Y, Mo, D}, {H, Min, Sec}}) when is_integer(Sec) ->
     IsoStr = io_lib:format(FmtStr, [Y, Mo, D, H, Min, Sec]),
     list_to_binary(IsoStr).
 
-bj_http_req(URL) -> bj_http_req(URL, [], ?DEFAULT_REQUEST_TIMEOUT).
-bj_http_req(URL, BodyArgs) -> bj_http_req(URL, BodyArgs, ?DEFAULT_REQUEST_TIMEOUT).
+bj_http_req(URL) ->
+    bj_http_req(URL, [], ?DEFAULT_REQUEST_TIMEOUT).
+bj_http_req(URL, BodyArgs) ->
+    bj_http_req(URL, BodyArgs, ?DEFAULT_REQUEST_TIMEOUT).
 bj_http_req(URL, _BodyArgs, Timeout) ->
     %% TODO: does cowboy has something like this?
     %% Body = mochiweb_util:urlencode(BodyArgs),
@@ -62,3 +96,30 @@ ensure_list(L) when is_list(L) -> L.
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================
+%%%===========================================================================
+%%% Tests
+%%%===========================================================================
+proper() ->
+    ProperOpts =
+        [{to_file, user},
+         {numtests, 1000}],
+    true = proper:quickcheck(prop_base58(), ProperOpts),
+    true = proper:quickcheck(prop_hex(), ProperOpts),
+    ok.
+
+prop_base58() ->
+    ?FORALL(Bin0,
+            binary(),
+            begin
+                %% filter out leading zeroes since these are not keept in base58
+                Bin = strip_leading_zeroes(Bin0),
+                Bin =:= mw_lib:dec_b58(mw_lib:enc_b58(Bin))
+            end).
+
+prop_hex() ->
+    ?FORALL(Bin,
+            binary(),
+            Bin =:= mw_lib:hex_to_bin(mw_lib:bin_to_hex(Bin))).
+
+strip_leading_zeroes(<<0, Rest/binary>>) -> strip_leading_zeroes(Rest);
+strip_leading_zeroes(Any) -> Any.
