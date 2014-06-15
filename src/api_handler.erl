@@ -76,11 +76,12 @@ response(Req, 'enter-contract'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
-                ContractId = erlang:list_to_integer(binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"ec_pubkey">>, ECPubKey},
-                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(Body),
+                {JSON0, _} = cowboy_req:binding('json', Req),
+                JSON = binary:bin_to_list(JSON0),
+                {[{<<"contract_id">>, ContractId0},
+                 {<<"ec_pubkey">>, ECPubKey},
+                 {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(JSON),
+                ContractId = binary_to_integer(ContractId0),
                 Response = mw_contract:enter_contract(ContractId, ECPubKey, RSAPubKey),
                 ?info("Respone: ~p", [Response]),
                 io:format("Respone: ~p", [Response]),
@@ -90,9 +91,9 @@ response(Req, 'enter-contract'=State) ->
     ?info("Respone JSON: ~p", [JSON]),
 
     %% allow access from other port - actually from anywhere
-    % Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
-    %                                  <<"'*'">>, Req),
-    {JSON, Req, State};
+    Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
+                                      <<"*">>, Req),
+    {JSON, Req1, State};
 
 response(Req, 'clone-contract'=State) ->
     HandleFun =
