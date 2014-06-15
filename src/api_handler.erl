@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.1.x/initial spike                                       %%%
+%%% Version     : 0.6.x/json calls                                          %%%
 %%% File        : api_handler.erl                                           %%%
 %%% Description : json response generation, as a handler for Cowboy         %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 29 May 2014                                               %%%
-%%% Changed     : 30 May 2014                                               %%%
+%%% Changed     : 14 Jun 2014                                               %%%
 %%%-------------------------------------------------------------------------%%%
 -module(api_handler).
 
@@ -38,12 +38,21 @@ allowed_methods(Req, State) ->
 resource_exists(Req, State) ->
     {true, Req, State}.
 
+content_types_accepted(Req, State) ->
+        {[{{<<"application">>, <<"json">>, '*'}, handle_post}
+    ], Req, State}.
+
 content_types_provided(Req, State) ->
     {[
-      {{<<"application">>, <<"json">>, []}, response},
-      {{<<"text">>, <<"plain">>, []}, response},
-      {{<<"text">>, <<"html">>, []}, response}
+      {{<<"application">>, <<"json">>, '*'}, response},
+      {{<<"text">>, <<"plain">>, '*'}, response},
+      {{<<"text">>, <<"html">>, '*'}, response}
      ], Req, State}.
+
+handle_post(Req, State) ->
+    Body = <<"<h1>Football, hacking and beautiful women at room 77.</h1>">>,
+    {ok, Req2} = cowboy_req:reply(200, [], Body, Req),
+    {true, Req2, State}.
 
 %% ----------------------------------------------------------------------------
 %% Responses
@@ -65,21 +74,28 @@ response(Req, 'bet-list'=State) ->
     {JSON, Req, State};
 
 response(Req, 'enter-contract'=State) ->
+    io:format("Respone ...", []),
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
-                ContractId = erlang:list_to_integer(binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"ec_pubkey">>, ECPubKey},
-                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(Body),
+                {JSON0, _} = cowboy_req:binding('json', Req),
+                JSON = binary:bin_to_list(JSON0),
+                {[{<<"contract_id">>, ContractId0},
+                 {<<"ec_pubkey">>, ECPubKey},
+                 {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(JSON),
+                ContractId = binary_to_integer(ContractId0),
                 Response = mw_contract:enter_contract(ContractId, ECPubKey, RSAPubKey),
                 ?info("Respone: ~p", [Response]),
+                io:format("Respone: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
     ?info("Respone JSON: ~p", [JSON]),
-    {JSON, Req, State};
+
+    %% allow access from other port - actually from anywhere
+    Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
+                                      <<"*">>, Req),
+    {JSON, Req1, State};
 
 response(Req, 'clone-contract'=State) ->
     HandleFun =
