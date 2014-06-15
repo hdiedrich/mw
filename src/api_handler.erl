@@ -50,7 +50,9 @@ content_types_provided(Req, State) ->
      ], Req, State}.
 
 handle_post(Req, State) ->
-    {true, Req, State}.
+    Body = <<"<h1>Football, hacking and beautiful women at room 77.</h1>">>,
+    {ok, Req2} = cowboy_req:reply(200, [], Body, Req),
+    {true, Req2, State}.
 
 %% ----------------------------------------------------------------------------
 %% Responses
