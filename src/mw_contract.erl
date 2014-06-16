@@ -56,12 +56,14 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p",
           [ContractId, ECPubKey]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
+
+    %% https://en.bitcoin.it/wiki/Base58Check_encoding
+    %% both privkeys and pubkeys are 51 chars in base58check and start with 5
     api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
+                   is_binary(catch mw_lib:dec_b58(ECPubKey)) andalso
+                   binary:at(ECPubKey, 0) == $5,
                    ?PUBKEY_TYPE),
-    %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
-    %% always 65 bytes == 130 hex digits
-    api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
+    api_validation((byte_size(ECPubKey) == 51), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey) andalso
                    is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
@@ -79,10 +81,10 @@ submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
 
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
     api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)), ?PUBKEY_TYPE),
-    %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
-    %% always 65 bytes == 130 hex digits
-    api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
+                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)) andalso
+                   binary:at(ECPubKey, 0) == $5,
+                   ?PUBKEY_TYPE),
+    api_validation((byte_size(ECPubKey) == 51), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(T2Signature) andalso
                    is_binary(catch mw_lib:hex_to_bin(T2Signature)),
@@ -170,7 +172,7 @@ get_contract_info(Id) ->
 create_contract(EventId) ->
     {ok, ContractId} = mw_pg:insert_contract(EventId),
     ok = mw_pg:insert_contract_event(ContractId, ?STATE_DESC_CREATED),
-    ok.
+    {ok, ContractId}.
 
 clone_contract(Id) ->
     {ok, NewId} = mw_pg:clone_contract(Id),
@@ -195,10 +197,11 @@ create_event(MatchNum, Headline, Desc, OracleKeysId,
         hybrid_aes_rsa_enc(EventPrivKey, NoPubKey),
     EventPrivKeyEncWithOracleYesKey =
         hybrid_aes_rsa_enc(EventPrivKey, YesPubKey),
-    ok = mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
-                            EventPrivKeyEncWithOracleNoKey,
-                            EventPrivKeyEncWithOracleYesKey),
-    ok.
+    {ok, EventId} =
+        mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
+                           EventPrivKeyEncWithOracleNoKey,
+                           EventPrivKeyEncWithOracleYesKey),
+    {ok, EventId}.
 
 %%%===========================================================================
 %%% Internal functions
@@ -379,21 +382,21 @@ manual_test_1() ->
           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
 
-    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Brazil beats Croatia", "More foo info", 1,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
-    ok = create_event(1, "Croatia beats Brazil", "More foo info", 2,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Croatia beats Brazil", "More foo info", 2,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
-    ok = create_event(1, "Match is invaded by aliens", "More foo info", 3,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Match is invaded by aliens", "More foo info", 3,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
 
     ok.
 
 manual_test_2() ->
-    create_contract(1),
+    {ok, _} = create_contract(1),
     ok.
