@@ -1,6 +1,9 @@
 <div class=main>
 
-  <h3>Prepartion</h3>
+
+  <!-- LIBS -->                                                          
+
+  <!-- BitcoinJS -->
 
   <script type="text/javascript" src="../bitcoinjs/crypto-js/crypto.js"></script>
   <script type="text/javascript" src="../bitcoinjs/crypto-js/sha256.js"></script>
@@ -24,30 +27,104 @@
 
   <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
 
-  <p><b>Please copy this addresses and its private key and keep them handy:</b></p>
+  <!-- RSA -->                                                          
 
-  <p><b>Your Bet Address:</b></p>
-  <p id=ECpub style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
+  <!-- for pkcs5pkey -->                                                          
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
+  <!-- for crypto -->                                                             
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
+  <!-- for crypto, asn1, asn1x509 -->                                             
+  <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script> 
+  <!-- for asn1x509(stohex) -->                                                   
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/base64x-1.1.min.js"></script>
 
-  <p><b>Its Private Key:</b></p>
-  <p id=ECpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/prng4.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script> 
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script> 
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa2.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/base64.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1hex-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsapem-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsasign-1.2.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/x509-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/pkcs5pkey-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1x509-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/crypto-1.1.js"></script>
+                                                                                  
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec.js"></script>  
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec-patch.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ecdsa-modified-1.0.js"></script>
 
-  <p><b>And an RSA Key:</b></p>
-  <p id=pem style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/keyutil-1.0.js"></script>
 
-  <p id=ok style="font-family: monospace; white-space: pre;"><font color=red>[An ok message should appear here.]</font></p>
+  <!-- jQuery -->                                                          
+
+  <script type="text/javascript" src="/jquery/jquery-1.11.1.min.js"></script>
+
+
+  <!-- TEXT -->                                                          
+
+  <h3>Prepartion</h3>
+
+  <h4>Instructions</h4>
+  <p>
+    <ul>
+      <li>
+        <b>Please send $AMOUNT to <span id=addr2><font color=red>[An address should appear here.]</font></span></b>
+        <br />
+        <br />
+      </li>
+      
+      <li>
+        <b>Please copy and keep handy:</b>
+        <br />
+        <br />
+        <ul>    
+          <li><b>1. Your Bet Address:</b>
+            <br />
+            <p id=ECpub style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
+          </li>  
+          <li><b>2. Its Private Key:</b>
+            <br />
+            <p id=ECpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+          </li>  
+          <li><b>3. Your Oracle Security Key:</b>
+            <br />
+            <p id=pem style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+          </li>  
+        </ul>    
+      </li>
+    </ul>    
+
+      <p id=ec_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An EC pubkey should appear here.]</font></p>
+
+      <p id=rsa_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An RSA pubkey should appear here.]</font></p>
+    
+      <p id=ok style="font-family: monospace; white-space: pre;"><font color=red>[An ok message should appear here.]</font></p>
+  </p>
+
+  <div id=result2 name=result2>
+      [ Some ok message should appear here. ]
+  </div>
 
   <hr>
 
+
+  <!-- SCRIPTS -->                                                          
+
   <script>
   
-    // Test scripts with basic signing functions
-    // -----------------------------------------
-
     // init    
     console.log(ok = "init.");
   
-    // create an eliptic key pair
+    // create eliptic key
     console.log("create eliptic key");
     var ec = new Bitcoin.ECKey();
     ec.setCompressed(true);
@@ -70,6 +147,8 @@
     // Print pub key to screen
     var ECtag = document.getElementById("ECpub");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
+    var ECtag = document.getElementById("addr2");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
     
     // Address
     // -------
@@ -82,47 +161,6 @@
     var ECtag = document.getElementById("addr");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + addr + "</font>";
     
-    // RSA
-    // ---
-    </script>
-    <!-- for pkcs5pkey -->                                                          
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
-    <!-- for crypto -->                                                             
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
-    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
-    <!-- for crypto, asn1, asn1x509 -->                                             
-    <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script> 
-    <!-- for asn1x509(stohex) -->                                                   
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/base64x-1.1.min.js"></script>
-
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/jsbn.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/jsbn2.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/prng4.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script> 
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script> 
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa2.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/base64.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1hex-1.1.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsapem-1.1.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsasign-1.2.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/x509-1.1.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/pkcs5pkey-1.0.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1-1.0.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1x509-1.0.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/crypto-1.1.js"></script>
-                                                                                    
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec.js"></script>  
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec-patch.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/ecdsa-modified-1.0.js"></script>
-
-    <script language="JavaScript" type="text/javascript" src="../jsrsasign/keyutil-1.0.js"></script>
-
-    <script>
     var rsa = new RSAKey();
     rsa.generate(1024, '10001'); // generate 1024bit RSA private key with public exponent 'x010001'
     var pem = KEYUTIL.getEncryptedPKCS5PEMFromRSAKey(rsa, "password");    
@@ -132,47 +170,42 @@
     var ECtag = document.getElementById("pem");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + pem + "</font>";
 
+
+    // Call to Mw
+    // ----------
+
+    var contract_id = "$CONTRACT_ID";
+    var ec_pubkey = ec58;
+    var rsa_pubkey = rsa.rsaPublicKey;
+  
+    var ECtag = document.getElementById("ec_pubkey");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ec_pubkey + "</font>";
+    var ECtag = document.getElementById("rsa_pubkey");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsa_pubkey + "</font>";
+
+    url = "http://127.0.0.1:8081/enter-contract/{" +
+              "\"contract_id\":\"" + contract_id + "\"," +
+              "\"ec_pubkey\":\"" + + "\","
+              "\"rsa_pubkey\":\"" + + "\"}";
     
+    alert(url);
+    
+    /*
+    $.ajax({
+             url: url,
+             success: function(response,status,xhr) { 
+                $( "#result2" ).html(xhr.responseText)
+             }
+             });
+    */      
+
+
     // Print an ok to screen and JS console.
+    // -------------------------------------
     console.log(ok = "ok.");
     var oktag = document.getElementById("ok");
     if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
 
   </script>
-
-  <h4>Instructions</h4>
-  <p>
-    <ll>
-      <li> Please send $AMOUNT to <span id=addr2><font color=red>[An address should appear here.]</font></span></li>
-      <li> Reload this page to see if the transaction has been mined. </li>
-    </ll>  
-  </p>
-
-  <script>
-    var ECtag = document.getElementById("addr2");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + addr + "</font>";
-  </script>
-
-  <p>
-    <a href=pend.html>continue</a>
-  </p>
-
-
-  <hr />
-
-
-  <h4>Notes</h4>
-  <p>
-    <ll>
-      <li> 
-        This step makes things technically simpler for us as the actual
-        betting contract can then use a single input.
-      </li>
-    </ll>
-  </p>
-
-  <p>
-    <a href=pend.html>continue</a>
-  </p>
 
 </div>
