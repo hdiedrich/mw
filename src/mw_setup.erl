@@ -213,15 +213,15 @@ results(Teams, Matches) ->
     %% io:format("sort ...~n", []),
     Sorted = lists:keysort(1, Offers),
 
-    [
-     %% io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
-     ok
-    || {Number, Prio, Headline, Detail} <- Sorted ],
+    % [
+     % io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
+     % ok
+    % || {Number, Prio, Headline, _Detail} <- Sorted ],
 
     [ {Number,
        lists:flatten(Headline),
        lists:flatten(Detail)}
-      || {Number, Prio, Headline, Detail} <- Sorted ].
+      || {Number, _Prio, Headline, Detail} <- Sorted ].
 
 results(Rec) ->
     [ result("beat", Rec, i),

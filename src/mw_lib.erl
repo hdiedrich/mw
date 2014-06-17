@@ -35,6 +35,24 @@ bin_to_hex(B) when is_binary(B) ->
                                 2 -> S
                             end))/bytes>> || <<I>> <= B>>.
 
+%% TODO: add proper support for leading "1" == 0x00 so we're not loosing zero
+%%       bytes in encoding/decoding
+dec_b58check(S) when is_list(S) -> dec_b58check(binary:list_to_bin(S));
+dec_b58check(B58) when is_binary(B58) ->
+    PayloadLen = byte_size(B = dec_b58(B58)) - 4,
+    <<Payload:PayloadLen/bytes, Hash:4/bytes>> = B,
+    <<ExpectedHash:4/bytes, _/binary>> = double_sha256(Payload),
+    true = (ExpectedHash =:= Hash),
+    Payload.
+
+enc_b58check(S) when is_list(S) -> enc_b58check(binary:list_to_bin(S));
+enc_b58check(B) when is_binary(B) ->
+    <<Hash:4/bytes, _/binary>> = double_sha256(B),
+    enc_b58(<<B/binary, Hash/binary>>).
+
+double_sha256(B) when is_binary(B) ->
+    crypto:hash(sha256, crypto:hash(sha256, B)).
+
 enc_b58(S) when is_list(S)   -> enc_b58(binary:list_to_bin(S));
 enc_b58(<<>>)                -> <<>>;
 enc_b58(B) when is_binary(B) -> enc_b58(binary:decode_unsigned(B), <<>>).
@@ -52,7 +70,6 @@ dec_b58(B) when is_binary(B) ->
 dec_b58(<<>>, _Pow, Num) ->
     binary:encode_unsigned(Num);
 dec_b58(<<C, Rest/binary>>, Pow, Num) ->
-    NotEqual = fun(E) when E /= C-> true; (_) -> false end,
     case pos_in_list(C, ?B58_ALPHABET) of
         {error, _} ->
             {error, invalid_base58};
@@ -111,9 +128,11 @@ prop_base58() ->
     ?FORALL(Bin0,
             binary(),
             begin
+                %% TODO: remove this when support for leading zeroes is added
                 %% filter out leading zeroes since these are not keept in base58
                 Bin = strip_leading_zeroes(Bin0),
-                Bin =:= mw_lib:dec_b58(mw_lib:enc_b58(Bin))
+                Bin =:= mw_lib:dec_b58(mw_lib:enc_b58(Bin)),
+                Bin =:= mw_lib:dec_b58check(mw_lib:enc_b58check(Bin))
             end).
 
 prop_hex() ->
