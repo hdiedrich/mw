@@ -58,17 +58,17 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
 
     %% https://en.bitcoin.it/wiki/Base58Check_encoding
-    %% both privkeys and pubkeys are 51 chars in base58check and start with 5
+    %% compressed EC pubkeys in base58check encoding is 50 chars
     api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:dec_b58(ECPubKey)) andalso
-                   binary:at(ECPubKey, 0) == $5,
+                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
                    ?PUBKEY_TYPE),
-    api_validation((byte_size(ECPubKey) == 51), ?EC_PUBKEY_LEN),
+    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey) andalso
                    is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
                    ?PUBKEY_TYPE),
     %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% 2048 bit RSA pubkey in pem encoding then hex encoded
     api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
@@ -78,14 +78,14 @@ submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
     ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubKey: ~p, "
           "T2Signature: ~p",
           [ContractId, ECPubKey, T2Signature]),
-
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
-    api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)) andalso
-                   binary:at(ECPubKey, 0) == $5,
-                   ?PUBKEY_TYPE),
-    api_validation((byte_size(ECPubKey) == 51), ?EC_PUBKEY_LEN),
 
+    api_validation(is_binary(ECPubKey) andalso
+                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
+                   ?PUBKEY_TYPE),
+    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
+
+    %% TODO: what's len of bitcoin tx signature?
     api_validation(is_binary(T2Signature) andalso
                    is_binary(catch mw_lib:hex_to_bin(T2Signature)),
                    ?SIGNATURE_TYPE),
