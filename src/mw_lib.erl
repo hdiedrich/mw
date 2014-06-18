@@ -35,20 +35,32 @@ bin_to_hex(B) when is_binary(B) ->
                                 2 -> S
                             end))/bytes>> || <<I>> <= B>>.
 
-%% TODO: add proper support for leading "1" == 0x00 so we're not loosing zero
-%%       bytes in encoding/decoding
-dec_b58check(S) when is_list(S) -> dec_b58check(binary:list_to_bin(S));
+dec_b58check(S) when is_list(S)   -> dec_b58check(binary:list_to_bin(S));
 dec_b58check(B58) when is_binary(B58) ->
-    PayloadLen = byte_size(B = dec_b58(B58)) - 4,
-    <<Payload:PayloadLen/bytes, Hash:4/bytes>> = B,
-    <<ExpectedHash:4/bytes, _/binary>> = double_sha256(Payload),
+    {Zeroes, Rest} = split_leading_ones_to_zeroes(B58, <<>>),
+    PayloadLen = byte_size(Bin = dec_b58(Rest)) - 4,
+    <<Payload:PayloadLen/bytes, Hash:4/bytes>> = Bin,
+    <<ExpectedHash:4/bytes, _/binary>> =
+        double_sha256(<<Zeroes/binary, Payload/binary>>),
     true = (ExpectedHash =:= Hash),
-    Payload.
+    <<Zeroes/binary, Payload/binary>>.
 
-enc_b58check(S) when is_list(S) -> enc_b58check(binary:list_to_bin(S));
+%% We assume application/version byte was already concatenated with payload
+enc_b58check(S) when is_list(S) ->
+    enc_b58check(binary:list_to_bin(S));
 enc_b58check(B) when is_binary(B) ->
     <<Hash:4/bytes, _/binary>> = double_sha256(B),
-    enc_b58(<<B/binary, Hash/binary>>).
+    B64 = enc_b58(<<B/binary, Hash/binary>>),
+    <<(leading_zeroes_as_ones(B))/binary, B64/binary>>.
+
+leading_zeroes_as_ones(<<0, B/binary>>) ->
+    <<"1", (leading_zeroes_as_ones(B))/binary>>;
+leading_zeroes_as_ones(_B) -> <<>>.
+
+split_leading_ones_to_zeroes(<<"1", B/binary>>, Acc) ->
+    split_leading_ones_to_zeroes(B, <<0, Acc/binary>>);
+split_leading_ones_to_zeroes(B, Acc) -> {Acc, B}.
+
 
 double_sha256(B) when is_binary(B) ->
     crypto:hash(sha256, crypto:hash(sha256, B)).
@@ -125,12 +137,9 @@ proper() ->
     ok.
 
 prop_base58() ->
-    ?FORALL(Bin0,
+    ?FORALL(Bin,
             binary(),
             begin
-                %% TODO: remove this when support for leading zeroes is added
-                %% filter out leading zeroes since these are not keept in base58
-                Bin = strip_leading_zeroes(Bin0),
                 Bin =:= mw_lib:dec_b58(mw_lib:enc_b58(Bin)),
                 Bin =:= mw_lib:dec_b58check(mw_lib:enc_b58check(Bin))
             end).
@@ -139,6 +148,3 @@ prop_hex() ->
     ?FORALL(Bin,
             binary(),
             Bin =:= mw_lib:hex_to_bin(mw_lib:bin_to_hex(Bin))).
-
-strip_leading_zeroes(<<0, Rest/binary>>) -> strip_leading_zeroes(Rest);
-strip_leading_zeroes(Any) -> Any.
