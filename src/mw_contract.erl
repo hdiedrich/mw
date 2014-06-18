@@ -65,7 +65,7 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey) andalso
-                   is_binary(catch mw_lib:hex_to_bin(ECPubKey)),
+                   is_binary(catch mw_lib:hex_to_bin(RSAPubKey)),
                    ?PUBKEY_TYPE),
     %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
     %% 2048 bit RSA pubkey in pem encoding then hex encoded

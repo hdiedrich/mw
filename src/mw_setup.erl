@@ -46,15 +46,16 @@ insert_wc_bet({_N, Headline, Detail}) ->
                                              OracleKeysId,
                                              EventPriv, EventPub),
     {ok, ContractId} = mw_contract:create_contract(EventId),
-    {ok, ECPubKey} =
+    {ok, ECPubKey0} =
         file:read_file(filename:join(code:priv_dir(middle_server),
                                      "test_keys/giver_keys1/ec_pubkey")),
+    ECPubKey = binary:replace(ECPubKey0, <<"\n">>, <<>>),
     {ok, RSAPubKey} =
         file:read_file(filename:join(code:priv_dir(middle_server),
                                      "test_keys/giver_keys1/rsa_pubkey.pem")),
-    % mw_contract:enter_contract(ContractId,
-    %                           ECPubKey,
-    %                           mw_lib:bin_to_hex(RSAPubKey)),
+    mw_contract:enter_contract(ContractId,
+                               ECPubKey,
+                               mw_lib:bin_to_hex(RSAPubKey)),
     Total = erlang:get(mw_event_count),
     ?info("~p Inserted oracle_keys & event ~p (~s %)",
           [self(), OracleKeysId,
