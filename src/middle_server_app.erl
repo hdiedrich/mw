@@ -26,8 +26,6 @@
 start(_Type, _Args) ->
     %% TODO: extract to node config file
     application:load(lager),
-    application:set_env(lager, error_logger_hwm, 500),
-
     application:load(mw),
     application:set_env(mw, pools,
                         [
@@ -42,6 +40,7 @@ start(_Type, _Args) ->
 
     %% TODO: application:ensure_all_started
     application:start(lager),
+    application:set_env(lager, error_logger_hwm, 500),
     application:start(jiffy),
 
     %% -------------------------------------------------------------------
@@ -53,9 +52,11 @@ start(_Type, _Args) ->
                       {'_', [{"/hello", api_handler, hello},
                              {"/sample", api_handler, sample},
                              {"/bet-list", api_handler, 'bet-list'},
-                             {"/enter-contract/:json", api_handler, 'enter-contract'},
+                             {"/enter-contract/:contract-id", api_handler, 'enter-contract'},
                              {"/clone-contract/:contract-id", api_handler, 'clone-contract'},
-                             {"/submit-t2-signature/:contract-id", api_handler, 'submit-t2-signature'}
+                             {"/submit-t2-signature/:contract-id", api_handler, 'submit-t2-signature'},
+                             {"/get-t3-for-signing/:contract-id", api_handler, 'get-t3-for-signing'},
+                             {"/submit-t3-signatures/:contract-id", api_handler, 'submit-t3-signatures'}
                             ]
                       }
                      ]),
