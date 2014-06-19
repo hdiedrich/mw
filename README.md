@@ -38,7 +38,7 @@ This is currently in middle_server_app in lieu of being extracted to a config fi
                          {pgsql_pool, [{size, 1}, {max_overflow, 1}],
                           [
                            {host, "localhost"},
-                           {dbname, "mw_alpha"},
+                           {dbname, "mw"},
                            {user, "mw"},
                            {pass, "mw"}
                           ]}
@@ -60,7 +60,21 @@ Build & Run the Stack
 To build this stack, run the following command:
 
 ``` bash
-$ make
+make
+```
+
+Due to bleeding-edge hipster combination of GNU make, erlang.mk, relx, the erlang.mk package index, git dependencies resolved using rebar and some manual build steps, you have to run make a few more times to actually get everything built the very first time:
+
+``` bash
+make
+```
+
+``` bash
+make
+```
+
+``` bash
+make
 ```
 
 To start the server in the foreground:
@@ -69,8 +83,7 @@ To start the server in the foreground:
 $ make run
 ```
 
-If you don't have a PostgreSQL server running it will crash partially but still
-serve pages.
+If you don't have a PostgreSQL server running it will crash partially but still serve pages.
 
 Content
 -------
