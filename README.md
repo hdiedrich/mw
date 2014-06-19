@@ -87,16 +87,13 @@ There are currently
      [http://localhost:8081/hello]
      [http://localhost:8081/sample]
      [http://localhost:8081/bet-list]
-     [http://localhost:8081/enter-contract]
+     [http://localhost:8081/enter-contract/<contract_id>]
+     [http://localhost:8081/clone-contract/<contract_id>]
+     [http://localhost:8081/submit-t2-signature/<contract_id>]
+     [http://localhost:8081/get-t3-for-signing/<contract_id>]
+     [http://localhost:8081/submit-t3-signatures/<contract_id>]
 
 The results are JSON objects. They are created in `api_handler.erl`. The matching of the URL is hard coded in the main dispatch rule, in `middle_server.erl` and matching atoms in `api_handler:response/2`.
-
-E.g. this is a curl request to enter a new contract:
-
-``` bash
-curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"ec_pubkey":"cafebabe", "rsa_pubkey":"cafebabe"}'  http://localhost:8081/enter-contract/42
-```
-
 
 ### Web Site
 
@@ -176,4 +173,54 @@ git clone https://github.com/matja/bitcoin-tool.git
 make
 sudo cp bitcoin-tool /usr/local/bin
 openssl rand 32 > temp_bytes && bitcoin-tool --network bitcoin-testnet --input-type private-key --input-format raw --input-file temp_bytes --output-type private-key --output-format base58check --public-key-compression compressed > ec_privkey && bitcoin-tool --network bitcoin-testnet --input-type private-key --input-format raw --input-file temp_bytes --output-type public-key --output-format base58check --public-key-compression compressed > ec_pubkey && rm -f temp_bytes
+```
+
+### Example debug flow:
+
+Reset database:
+
+``` bash
+psql mw_alpha < priv/postgres/mw_db_drop_all
+psql mw_alpha < priv/postgres/mw_db_init
+```
+
+Create some default events with dummy giver already entered:
+
+``` erlang
+mw_setup:insert_world_cup_events().
+```
+
+Enter taker:
+
+``` bash
+curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"ec_pubkey":"6Vt5STpVk1MNmgNLUQjTsNrQYfF5viLUJHLGG3NqXvTjLwa3KT", "rsa_pubkey":"2d2d2d2d2d424547494e205055424c4943204b45592d2d2d2d2d0a4d494942496a414e42676b71686b6947397730424151454641414f43415138414d49494243674b434151454131476656794477383368705741616738326935570a474735354e6a72444c32365864637254375a30542f585a6a73344d4449594c6137436b7a6a3833386147556e6a61586a5a616365737a56766b325a57637257330a7630696b67455a66696b436d64457263773079416252326f6235516a4652514a2b332f67763834585375583969536c37645877427831437644616c38636961530a3039725244355a4a6a2f6e64734368382b676658704556706d384b614659454e66473176636139793173324970366c686438485846466575616254332b4c58390a30586d7658596166707a35302f6d5a425068393063376233366e6c4d556d386771575350616f6e6c4a6266584272753350766a632b6e466f674e786b4161394b0a664545345036674b6d62473862392f70795944726d59484253306e514f696e77747831784c397559547145635a5749473146786d4357626771423831503858540a4f514944415141420a2d2d2d2d2d454e44205055424c4943204b45592d2d2d2d2d0a"}'  http://localhost:8081/enter-contract/1
+```
+
+This function should be called by the website when updating the contract page. This calls Bj to build T2 and then adds it to SQL:
+``` erlang
+mw_contract:get_contract_t2_state(1)
+```
+
+Submit t2 signature. Call this twice so there are two signatures added.
+
+``` bash
+curl -v -H "Accept: application/json" -H "Content -X GET -d '{"ec_pubkey":"6Vt5STpVk1MNmgNLUQjTsNrQYfF5viLUJHLGG3NqXvTjLwa3KT", "t2_signature":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}'  http://localhost:8081/submit-t2-signature/1
+```
+
+Manually add the event outcome. This function will later be called through e.g. some authenticated (perhaps EC signed?) API by the oracle:
+
+``` erlang
+mw_contract:add_event_outcome(1, true).
+```
+
+Get t3 for signing:
+``` bash
+curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"to_address":"mrQ8iqcBfkTz1YVR3b4nhcGgEM6Yt7DwkD"}'  http://localhost:8081/get-t3-for-signing/1
+
+```
+
+Submit t3 signatures:
+
+``` bash
+curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"t3_raw":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF","t3_signature1":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", "t3_signature2":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}'  http://localhost:8081/submit-t3-signatures/1
 ```

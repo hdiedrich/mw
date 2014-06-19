@@ -1,5 +1,5 @@
--define(API_ERROR(Error), begin {ErrorCode, ErrorMsg} = Error,
-                                throw({api_error, {ErrorCode, ErrorMsg}}) end).
+%% We use element/2 to avoid declaring variable in the macro
+-define(API_ERROR(Error), throw({api_error, {element(1, Error), element(2, Error)}})).
 %% Error code 0 is catch-all == "Unknown Error"
 -define(CONTRACT_ID_TYPE, {1, "contract id is not integer"}).
 
@@ -9,11 +9,26 @@
 
 -define(SIGNATURE_TYPE, {5, "signature is not hex encoded binary"}).
 -define(SIGNATURE_LEN, {6, "signature length is not 73, 72 or 71 bytes"}).
--define(EC_PUBKEY_MISMATCH, {12, "t2 signing pubkey is not giver nor taker"}).
+-define(EC_PUBKEY_MISMATCH, {7, "signing pubkey is not giver or taker"}).
 
--define(CONTRACT_FULL, {7, "contract full; has giver and taker"}).
--define(CONTRACT_NOT_FOUND, {8, "contract not found"}).
+-define(CONTRACT_FULL, {8, "contract full; has giver and taker"}).
+-define(CONTRACT_NOT_FOUND, {9, "contract not found"}).
 
--define(CONTRACT_EMPTY, {9, "contract empty"}).
--define(CONTRACT_ONLY_GIVER, {10, "contract only has giver"}).
--define(CONTRACT_ONLY_TAKER, {11, "contract only has taker"}).
+-define(CONTRACT_EMPTY, {10, "contract empty"}).
+-define(CONTRACT_ONLY_GIVER, {11, "contract only has giver"}).
+-define(CONTRACT_ONLY_TAKER, {12, "contract only has taker"}).
+
+-define(CONTRACT_T2_NOT_COMPLETE, {13, "cannot get t3: t2 is not complete"}).
+
+-define(T2_NOT_BROADCASTED,
+        {14, "T2 was not broadcasted. Please verify keys/signatures."}).
+
+-define(ADDRESS_TYPE, {15, "address is not base58check encoded binary"}).
+-define(ADDRESS_LEN, {16, "address is not 27-34 chars long"}).
+
+-define(NO_EVENT_OUTCOME, {17, "cannot get t3: no event outcome"}).
+
+-define(T3_NOT_BROADCASTED,
+        {18, "T3 was not broadcasted. Please verify signatures."}).
+
+-define(CONTRACT_FINISHED, {19, "contract is finished"}).

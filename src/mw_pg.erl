@@ -66,7 +66,10 @@ select_contract_info(Id) ->
     Statement2 =
         "SELECT e.match_no, e.headline, e.description, e.outcome, "
         "       e.event_pubkey, c.giver_ec_pubkey, c.taker_ec_pubkey, "
-        "       c.t2_sighash_input_0, c.t2_sighash_input_1, t2_raw "
+        "       c.event_key_enc_with_oracle_yes_and_giver_keys, "
+        "       c.event_key_enc_with_oracle_no_and_taker_keys, "
+        "       c.t2_sighash_input_0, c.t2_sighash_input_1, "
+        "       c.t2_hash, c.t2_raw "
         "FROM events e, contracts c "
         "WHERE e.id = c.event_id and c.id = $1;",
     {ok, [[{<<"match_no">>, MatchNo},
@@ -76,8 +79,11 @@ select_contract_info(Id) ->
            {<<"event_pubkey">>, EventPubKey},
            {<<"giver_ec_pubkey">>, GiverECPubKey},
            {<<"taker_ec_pubkey">>, TakerECPubKey},
+           {<<"event_key_enc_with_oracle_yes_and_giver_keys">>, EncEventKeyYes},
+           {<<"event_key_enc_with_oracle_no_and_taker_keys">>, EncEventKeyNo},
            {<<"t2_sighash_input_0">>, T2SigHashInput0},
            {<<"t2_sighash_input_1">>, T2SigHashInput1},
+           {<<"t2_hash">>, T2Hash},
            {<<"t2_raw">>, T2Raw}
           ]]} =
         mw_pg_lib:parse_select_result(
@@ -92,7 +98,8 @@ select_contract_info(Id) ->
     FormatedEvents = lists:map(FormatEvent, Events),
     {ok, MatchNo, Headline, Desc, Outcome,
      EventPubKey, GiverECPubKey, TakerECPubKey,
-     T2SigHashInput0, T2SigHashInput1, T2Raw,
+     EncEventKeyYes, EncEventKeyNo,
+     T2SigHashInput0, T2SigHashInput1, T2Raw, T2Hash,
      FormatedEvents}.
 
 select_contract_ec_pubkeys(Id) ->
@@ -137,8 +144,8 @@ clone_contract(Id) ->
     {ok, NewId}.
 
 %% Add giver or taker
-update_contract(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
-    {ECKeyTable, RSAKeyTable, EventKeyTable} =
+update_contract_enter(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
+    {ECKeyColumn, RSAKeyColumn, EventKeyColumn} =
         case GiverOrTaker of
             giver -> {"giver_ec_pubkey", "giver_rsa_pubkey",
                       "event_key_enc_with_oracle_yes_and_giver_keys"};
@@ -147,9 +154,9 @@ update_contract(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
         end,
     Statement =
         "UPDATE contracts SET " ++
-        ECKeyTable    ++ " = " ++ "$1, " ++
-        RSAKeyTable   ++ " = " ++ "$2, " ++
-        EventKeyTable ++ " = " ++ "$3 "  ++
+        ECKeyColumn    ++ " = " ++ "$1, " ++
+        RSAKeyColumn   ++ " = " ++ "$2, " ++
+        EventKeyColumn ++ " = " ++ "$3 "  ++
         "WHERE id = $4;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
                        [ECPubKey, RSAPubKey, EventKeyDoubleEnc, Id]),
@@ -158,27 +165,46 @@ update_contract(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
     ok.
 
 %% Add t2 sighashes and t2 raw
-update_contract(Id, T2SigHashInput0, T2SigHashInput1, T2Raw) ->
+update_contract_t2(Id, T2SigHashInput0, T2SigHashInput1, T2Raw, T2Hash) ->
     Statement =
         "UPDATE contracts SET "
         "t2_sighash_input_0 = $1, "
         "t2_sighash_input_1 = $2, "
-        "t2_raw = $3 "
-        "WHERE id = $4;",
+        "t2_raw = $3, "
+        "t2_hash = $4 "
+        "WHERE id = $5;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
-                       [T2SigHashInput0, T2SigHashInput1, T2Raw, Id]),
+                       [T2SigHashInput0, T2SigHashInput1, T2Raw, T2Hash, Id]),
     {ok, _} = mw_pg_lib:parse_insert_result(
                 mw_pg_lib:equery(Statement, Params)),
     ok.
 
 %% Update t2 raw after adding one signature to it
-update_contract(Id, T2Raw) ->
+update_contract_t2(Id, T2Raw, T2Hash) ->
     Statement =
         "UPDATE contracts SET "
-        "t2_raw = $1 "
-        "WHERE id = $2;",
+        "t2_raw = $1, t2_hash = $2 "
+        "WHERE id = $3;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
-                       [T2Raw, Id]),
+                       [T2Raw, T2Hash, Id]),
+    {ok, _} = mw_pg_lib:parse_insert_result(
+                mw_pg_lib:equery(Statement, Params)),
+    ok.
+
+%% Add t3 after calling Bj for /get-unsigned-t3/
+update_contract_t3(Id, GiverOrTaker, T3Raw, T3Hash) ->
+    {T3RawColumn, T3HashColumn} =
+        case GiverOrTaker of
+            giver -> {"t3_to_giver_raw", "t3_to_giver_sighash"};
+            taker -> {"t3_to_taker_raw", "t3_to_taker_sighash"}
+        end,
+    Statement =
+        "UPDATE contracts SET " ++
+        T3RawColumn  ++ " = " ++ "$1, " ++
+        T3HashColumn ++ " = " ++ "$2 "  ++
+        "WHERE id = $3;",
+    Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
+                       [T3Raw, T3Hash, Id]),
     {ok, _} = mw_pg_lib:parse_insert_result(
                 mw_pg_lib:equery(Statement, Params)),
     ok.
@@ -247,3 +273,27 @@ insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
         mw_pg_lib:parse_insert_result(mw_pg_lib:equery(Statement,
                                                        Params)),
     {ok, EventId}.
+
+update_event(Id, Outcome) ->
+    Statement =
+        "UPDATE events SET "
+        "outcome = $1 "
+        "WHERE id = $2;",
+    Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
+                       [Outcome, Id]),
+    {ok, _} = mw_pg_lib:parse_insert_result(
+                mw_pg_lib:equery(Statement, Params)),
+    ok.
+
+select_contracts_of_event(EventId) ->
+    Statement =
+        "SELECT c.id "
+        "FROM contracts c "
+        "WHERE c.event_id = $1; ",
+    %% TODO: change to support multiple oracles
+    %% "WHERE ok.id = $1;",
+    {ok, List} =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement, [mw_pg_lib:ensure_epgsql_type(EventId)])),
+    ContractIds = lists:map(fun([{<<"id">>, Id}]) -> Id end, List),
+    {ok, ContractIds}.
