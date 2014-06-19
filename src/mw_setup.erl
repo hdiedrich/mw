@@ -16,35 +16,68 @@ insert_world_cup_events() ->
     erlang:put(count, 1),
     Results = results(teams("setup/teams.csv"),
                       matches("setup/matches.csv")),
-    Total = length(Results),
-    %% Quick hack to scale on 4 concurrent threads to saturate CPU for key gen
-    {PartA, PartB} = lists:split(Total div 2, Results),
-    {Part1, Part2} = lists:split(Total div 4, PartA),
-    {Part3, Part4} = lists:split(Total div 4, PartB),
+    %% Quick hack to scale up concurrency a bit as CPU for key gen is bottleneck
+    {FirstResults, _} = lists:split(length(Results) div 100, Results),
+    Total = length(FirstResults),
+    {Part1, Rest1} = lists:split(Total div 6, FirstResults),
+    {Part2, Rest2} = lists:split(Total div 6, Rest1),
+    {Part3, Rest3} = lists:split(Total div 6, Rest2),
+    {Part4, Rest4} = lists:split(Total div 6, Rest3),
+    {Part5, Part6} = lists:split(Total div 6, Rest4),
     Spawn =
-        fun(Part) -> spawn(fun() -> lists:map(fun insert_wc_event/1, Part) end)
+        fun(Part) -> spawn(fun() ->
+                                   erlang:put(mw_event_count, Total),
+                                   lists:map(fun insert_wc_bet/1, Part)
+                           end)
         end,
-    lists:foreach(Spawn, [Part1, Part2, Part3, Part4]),
+    lists:foreach(Spawn, [
+                          Part1, Part2, Part3, Part4, Part5, Part6
+                         ]),
     ok.
 
-insert_wc_event({N, Headline, Detail}) ->
+insert_wc_bet({_N, Headline, Detail}) ->
     {ok, EventPriv, EventPub,
      OracleYesPriv, OracleYesPub,
      OracleNoPriv, OracleNoPub} = gen_keys(),
     {ok, OracleKeysId} =
         mw_pg:insert_oracle_keys(OracleNoPub, OracleNoPriv,
                                  OracleYesPub, OracleYesPriv),
-    ok = mw_contract:create_event(null, Headline, Detail,
-                                  OracleKeysId,
-                                  EventPriv, EventPub),
-    ?info("~p Inserted oracle_keys & event ~p (~p)",
-          [self(), N, OracleKeysId]),
+    {ok, EventId} = mw_contract:create_event(null, Headline, Detail,
+                                             OracleKeysId,
+                                             EventPriv, EventPub),
+    {ok, ContractId} = mw_contract:create_contract(EventId),
+    {ok, ECPubKey0} =
+        file:read_file(filename:join(code:priv_dir(middle_server),
+                                     "test_keys/giver_keys1/ec_pubkey")),
+    ECPubKey = binary:replace(ECPubKey0, <<"\n">>, <<>>),
+    {ok, RSAPubKey} =
+        file:read_file(filename:join(code:priv_dir(middle_server),
+                                     "test_keys/giver_keys1/rsa_pubkey.pem")),
+    mw_contract:enter_contract(ContractId,
+                               ECPubKey,
+                               mw_lib:bin_to_hex(RSAPubKey)),
+    Total = erlang:get(mw_event_count),
+    ?info("~p Inserted oracle_keys & event ~p (~s %)",
+          [self(), OracleKeysId,
+           io_lib:format("~.2f", [(OracleKeysId / Total) * 100])]),
     ok.
 
 gen_keys() ->
+    %% Experiment to block for quality entropy bits from /dev/random on Linux
+    %% Turned out to take WAY too long to get enough bits to generate keys for
+    %% all the bets.
+    %% TODO: figure out if we can generate keys with this in a timely manner by
+    %% adding enough entropy to Linux:
+    %% TMPRandFile = "/tmp/mw_openssl_rand_file",
+    %% SetOpenSSLRandFile =
+    %%    "dd if=/dev/random bs=1 count=1024 of=" ++ TMPRandFile ++ "; "
+    %%    "export RANDFILE=" ++ TMPRandFile,
+    %% os:cmd(SetOpenSSLRandFile),
+
     {ok, OracleYesPriv, OracleYesPub} = gen_rsa_keypair(),
     {ok, OracleNoPriv, OracleNoPub}   = gen_rsa_keypair(),
     {ok, EventPriv, EventPub}         = gen_ec_keypair(),
+
     {ok, EventPriv, EventPub,
      OracleYesPriv, OracleYesPub,
      OracleNoPriv, OracleNoPub}.
@@ -181,15 +214,15 @@ results(Teams, Matches) ->
     %% io:format("sort ...~n", []),
     Sorted = lists:keysort(1, Offers),
 
-    [
-     %% io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
-     ok
-    || {Number, Prio, Headline, Detail} <- Sorted ],
+    % [
+     % io:format("#~p ~s - ~s~n", [Number, Headline, Detail])
+     % ok
+    % || {Number, Prio, Headline, _Detail} <- Sorted ],
 
     [ {Number,
        lists:flatten(Headline),
        lists:flatten(Detail)}
-      || {Number, Prio, Headline, Detail} <- Sorted ].
+      || {Number, _Prio, Headline, Detail} <- Sorted ].
 
 results(Rec) ->
     [ result("beat", Rec, i),

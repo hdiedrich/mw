@@ -31,7 +31,7 @@ start(_Type, _Args) ->
     application:load(mw),
     application:set_env(mw, pools,
                         [
-                         {pgsql_pool, [{size, 4}, {max_overflow, 4}],
+                         {pgsql_pool, [{size, 2}, {max_overflow, 2}],
                           [
                            {host, "localhost"},
                            {dbname, "mw"},
@@ -54,7 +54,8 @@ start(_Type, _Args) ->
                              {"/sample", api_handler, sample},
                              {"/bet-list", api_handler, 'bet-list'},
                              {"/enter-contract/:json", api_handler, 'enter-contract'},
-                             {"/clone-contract/:contract-id", api_handler, 'clone-contract'}
+                             {"/clone-contract/:contract-id", api_handler, 'clone-contract'},
+                             {"/submit-t2-signature/:contract-id", api_handler, 'submit-t2-signature'}
                             ]
                       }
                      ]),

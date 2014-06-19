@@ -31,7 +31,8 @@
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
 -define(BJ_MOCKED, true).
--define(BJ_REQUEST_URL, <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_URL_GET_UNSIGNED_T2,     <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_URL_SUBMIT_T2_SIGNATURE, <<"http://localhost/submit-t2-signature">>).
 -define(BJ_REQUEST_TIMEOUT, 5000).
 
 %%%===========================================================================
@@ -55,16 +56,47 @@ enter_contract(ContractId, ECPubKey, RSAPubKey) ->
     ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p",
           [ContractId, ECPubKey]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
-    api_validation(is_binary(ECPubKey), ?PUBKEY_TYPE),
-    %% https://en.bitcoin.it/wiki/Technical_background_of_Bitcoin_addresses
-    %% always 65 bytes == 130 hex digits
-    api_validation((byte_size(ECPubKey) == 130), ?EC_PUBKEY_LEN),
 
-    api_validation(is_binary(RSAPubKey), ?PUBKEY_TYPE),
+    %% https://en.bitcoin.it/wiki/Base58Check_encoding
+    %% compressed EC pubkeys in base58check encoding is 50 chars
+    api_validation(is_binary(ECPubKey) andalso
+                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
+                   ?PUBKEY_TYPE),
+    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
+
+    api_validation(is_binary(RSAPubKey) andalso
+                   is_binary(catch mw_lib:hex_to_bin(RSAPubKey)),
+                   ?PUBKEY_TYPE),
     %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% 2048 bit RSA pubkey in pem encoding then hex encoded
     api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
+    [{"success-message", "ok"}].
+
+submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
+    ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubKey: ~p, "
+          "T2Signature: ~p",
+          [ContractId, ECPubKey, T2Signature]),
+    api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
+
+    api_validation(is_binary(ECPubKey) andalso
+                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
+                   ?PUBKEY_TYPE),
+    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
+
+    %% TODO: what's len of bitcoin tx signature?
+    api_validation(is_binary(T2Signature) andalso
+                   is_binary(catch mw_lib:hex_to_bin(T2Signature)),
+                   ?SIGNATURE_TYPE),
+    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
+    %% TODO: verify! Can it also be shorter?
+    SignSize = byte_size(T2Signature),
+    api_validation(SignSize == 73 orelse
+                   SignSize == 72 orelse
+                   SignSize == 71, ?SIGNATURE_LEN),
+
+    ok = do_submit_t2_signature(ContractId, ECPubKey, T2Signature),
     [{"success-message", "ok"}].
 
 %%%===========================================================================
@@ -140,7 +172,7 @@ get_contract_info(Id) ->
 create_contract(EventId) ->
     {ok, ContractId} = mw_pg:insert_contract(EventId),
     ok = mw_pg:insert_contract_event(ContractId, ?STATE_DESC_CREATED),
-    ok.
+    {ok, ContractId}.
 
 clone_contract(Id) ->
     {ok, NewId} = mw_pg:clone_contract(Id),
@@ -153,8 +185,8 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %%api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
     %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
     %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
-    ok = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
-    ok.
+    {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
+    {ok, Id}.
 
 create_event(MatchNum, Headline, Desc, OracleKeysId,
              EventPrivKey, EventPubKey) ->
@@ -165,10 +197,11 @@ create_event(MatchNum, Headline, Desc, OracleKeysId,
         hybrid_aes_rsa_enc(EventPrivKey, NoPubKey),
     EventPrivKeyEncWithOracleYesKey =
         hybrid_aes_rsa_enc(EventPrivKey, YesPubKey),
-    ok = mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
-                            EventPrivKeyEncWithOracleNoKey,
-                            EventPrivKeyEncWithOracleYesKey),
-    ok.
+    {ok, EventId} =
+        mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
+                           EventPrivKeyEncWithOracleNoKey,
+                           EventPrivKeyEncWithOracleYesKey),
+    {ok, EventId}.
 
 %%%===========================================================================
 %%% Internal functions
@@ -199,6 +232,27 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     EnteredEvent = case GiverOrTaker of
                        giver -> ?STATE_DESC_GIVER_ENTERED;
                        taker -> ?STATE_DESC_TAKER_ENTERED
+                   end,
+    ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
+    ok.
+
+do_submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
+    %% validate contract event states? e.g. duplicated signing reqs
+    GiverOrTaker = case mw_pg:select_contract_ec_pubkeys(ContractId) of
+                       {ok, ECPubKey, _} -> <<"giver">>;
+                       {ok, _, ECPubKey} -> <<"taker">>;
+                       {ok, _, _}        -> ?API_ERROR(?EC_PUBKEY_MISMATCH)
+                   end,
+    {ok, Info} = get_contract_info(ContractId),
+    T2Raw = proplists:get_value("t2_raw", Info),
+    ReqRes =
+        bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker),
+    %% TODO: handle returned new t2 hash?
+    NewT2 = proplists:get_value("t2-raw-partially-signed", ReqRes),
+    ok = mw_pg:update_contract(ContractId, NewT2),
+    EnteredEvent = case GiverOrTaker of
+                       <<"giver">> -> ?STATE_DESC_GIVER_SIGNED_T2;
+                       <<"taker">> -> ?STATE_DESC_TAKER_SIGNED_T2
                    end,
     ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
     ok.
@@ -240,8 +294,37 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
                  ]
                  };
             false ->
-                mw_lib:bj_http_req(<<?BJ_REQUEST_URL/binary, $?, QS/binary>>,
-                                   [], 5000)
+                mw_lib:bj_http_req(<<?BJ_URL_GET_UNSIGNED_T2/binary,
+                                     $?, QS/binary>>, [], 5000)
+        end,
+    Res.
+
+bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker) ->
+    QS = cow_qs:qs(
+           [
+            {<<"t2-signature">>, T2Signature},
+            {<<"t2-raw">>, T2Raw},
+            {<<"pubkey">>, ECPubKey},
+            {<<"sign-for">>, GiverOrTaker}
+           ]),
+    %% TODO: parse response to proplist
+    {ok, Res} =
+        case ?BJ_MOCKED of
+            true ->
+                {ok,
+                 [
+                  {"new-t2-hash",
+                   "A1EFFEC100000000FFFF"},
+                  {"t2-raw-partially-signed",
+                   "A1EFFEC100000000FFFFFF"}
+                  %% TODO
+                  %% {"t2-broadcasted",
+                  %% "A1EFFEC100000000FFFFFFFF"}
+                 ]
+                 };
+            false ->
+                mw_lib:bj_http_req(<<?BJ_URL_SUBMIT_T2_SIGNATURE/binary,
+                                     $?, QS/binary>>, [], 5000)
         end,
     Res.
 
@@ -278,39 +361,42 @@ hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
 %%%===========================================================================
 %% mw_contract:manual_test_1().
 manual_test_1() ->
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_privkey.pem")),
+    {ok, _Id} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys1/oracle_yes_privkey.pem")),
 
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_privkey.pem")),
+    {ok, _Id2} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys2/oracle_yes_privkey.pem")),
 
-    ok = create_oracle_keys(
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_no_privkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
-           rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
+    {ok, _Id3} =
+        create_oracle_keys(
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_no_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_no_privkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_pubkey.pem"),
+          rsa_key_from_file("test_keys/oracle_keys3/oracle_yes_privkey.pem")),
 
-    ok = create_event(1, "Brazil beats Croatia", "More foo info", 1,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Brazil beats Croatia", "More foo info", 1,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
-    ok = create_event(1, "Croatia beats Brazil", "More foo info", 2,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Croatia beats Brazil", "More foo info", 2,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
-    ok = create_event(1, "Match is invaded by aliens", "More foo info", 3,
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
-                      mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
+    {ok, _} = create_event(1, "Match is invaded by aliens", "More foo info", 3,
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PRIVKEY),
+                           mw_lib:hex_to_bin(?TEST_EC_EVENT_PUBKEY)),
 
 
     ok.
 
 manual_test_2() ->
-    create_contract(1),
+    {ok, _} = create_contract(1),
     ok.
