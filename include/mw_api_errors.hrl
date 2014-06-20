@@ -5,7 +5,7 @@
 
 -define(EC_PUBKEY_TYPE, {2, "ec pubkey is not base58check encoded"}).
 -define(RSA_PUBKEY_TYPE, {22, "rsa pubkey is not pem encoded"}).
--define(EC_PUBKEY_LEN, {3, "base58check ec pubkey is not correct length (51)"}).
+-define(EC_PUBKEY_LEN, {3, "base58check ec pubkey is not correct length (50)"}).
 -define(RSA_PUBKEY_LEN, {4, "pem encoded rsa pubkey is not correct length (???)"}).
 
 -define(SIGNATURE_TYPE, {5, "signature is not hex encoded"}).
