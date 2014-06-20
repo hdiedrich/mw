@@ -4,13 +4,13 @@ AIX World Cup 2014 Middle Ware
 The AIX WC14 concept enables football bets on the Bitcoin blockchain that are decentralized, oracle-driven contacts, requiring less trust.
 
      Description : Mw - AI Effect World Cup 2014 - Middle Server
-     Version     : 0.3.x/JS stuff, web flow
+     Version     : 0.6.x/JSON flow
      File        : README.md
      Copyright   : AI Effect Group, Berlin
      Author      : H. Diedrich <hd2010@eonblast.com>
      License     : MIT
      Created     : 24 May 2014
-     Changed     : 08 June 2014
+     Changed     : 21 June 2014
 
 Status
 ------
@@ -60,21 +60,15 @@ Build & Run the Stack
 To build this stack, run the following command:
 
 ``` bash
-make
+$ make
 ```
 
 Due to bleeding-edge hipster combination of GNU make, erlang.mk, relx, the erlang.mk package index, git dependencies resolved using rebar and some manual build steps, you have to run make a few more times to actually get everything built the very first time:
 
 ``` bash
-make
-```
-
-``` bash
-make
-```
-
-``` bash
-make
+$ make
+$ make
+$ make
 ```
 
 To start the server in the foreground:
@@ -193,11 +187,13 @@ openssl rand 32 > temp_bytes && bitcoin-tool --network bitcoin-testnet --input-t
 Reset database:
 
 ``` bash
-psql mw_alpha < priv/postgres/mw_db_drop_all
-psql mw_alpha < priv/postgres/mw_db_init
+psql mw < priv/postgres/mw_db_drop_all
+psql mw < priv/postgres/mw_db_init
 ```
 
-Create some default events with dummy giver already entered:
+You will have to give all privileges again unless you don't.
+
+Create some default events with dummy giver already entered (must do to call test pages prep/n etc):
 
 ``` erlang
 mw_setup:insert_world_cup_events().
@@ -206,7 +202,7 @@ mw_setup:insert_world_cup_events().
 Enter taker:
 
 ``` bash
-curl -v -H "Accept: application/json" -H "Content-type: application/json" -X GET -d '{"ec_pubkey":"6Vt5STpVk1MNmgNLUQjTsNrQYfF5viLUJHLGG3NqXvTjLwa3KT", "rsa_pubkey":"2d2d2d2d2d424547494e205055424c4943204b45592d2d2d2d2d0a4d494942496a414e42676b71686b6947397730424151454641414f43415138414d49494243674b434151454131476656794477383368705741616738326935570a474735354e6a72444c32365864637254375a30542f585a6a73344d4449594c6137436b7a6a3833386147556e6a61586a5a616365737a56766b325a57637257330a7630696b67455a66696b436d64457263773079416252326f6235516a4652514a2b332f67763834585375583969536c37645877427831437644616c38636961530a3039725244355a4a6a2f6e64734368382b676658704556706d384b614659454e66473176636139793173324970366c686438485846466575616254332b4c58390a30586d7658596166707a35302f6d5a425068393063376233366e6c4d556d386771575350616f6e6c4a6266584272753350766a632b6e466f674e786b4161394b0a664545345036674b6d62473862392f70795944726d59484253306e514f696e77747831784c397559547145635a5749473146786d4357626771423831503858540a4f514944415141420a2d2d2d2d2d454e44205055424c4943204b45592d2d2d2d2d0a"}'  http://localhost:8081/enter-contract/1
+curl -v -H "Accept: application/json" -H "Content-type: applicatjson" "http://127.0.0.1:8081/enter-contract/\{\"contract_id\":\"5\",\"ec_pubkey\":\"6AymbcmHNSVXXcYh2HQDqNZc4HGHL2GwaTTYKDNgZtiDJvZQXN\",\"rsa_pubkey\":\"-----BEGIN%20PUBLIC%20KEY-----%5Cr%5CnMIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHuMkwMNQwToUtGApry8GyuBlOpv%5Cr%5CnJBKtKnKh46VWeLWziIV%2BPve2PdoOBB9%2BHCHYZwAcHDJe5%2FV0bN1RsCZk6WryIFx5%5Cr%5Cn3LfrTR7vp48QZARiPwVAQzkfRwBxw9TqddubngASXMdvVkvZJNNKGKqCipIiETuR%5Cr%5Cn%2BvbexI5HKBLt86fdAgMBAAE%3D%5Cr%5Cn-----END%20PUBLIC%20KEY-----%5Cr%5Cn\"\}" 
 ```
 
 This function should be called by the website when updating the contract page. This calls Bj to build T2 and then adds it to SQL:
