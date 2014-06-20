@@ -78,12 +78,13 @@ response(Req, 'enter-contract'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                {JSON, _} = cowboy_req:binding('json', Req),
+                ?info("JSON: ~p", [JSON]),
+                {[{<<"contract_id">>, ContractId0},
+                  {<<"ec_pubkey">>, ECPubKey},
+                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"ec_pubkey">>, ECPubKey},
-                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(Body),
                 Response = mw_contract:enter_contract(ContractId,
                                                       ECPubKey, RSAPubKey),
                 ?info("Respone: ~p", [Response]),
@@ -101,7 +102,8 @@ response(Req, 'clone-contract'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                {JSON, _} = cowboy_req:binding('json', Req),
+                {[{<<"contract_id">>, ContractId0}]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
                 Response = mw_contract:clone_contract(ContractId),
@@ -116,12 +118,12 @@ response(Req, 'submit-t2-signature'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                {JSON, _} = cowboy_req:binding('json', Req),
+                {[{<<"contract_id">>, ContractId0},
+                  {<<"ec_pubkey">>, ECPubKey},
+                  {<<"t2_signature">>, T2Signature}]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"ec_pubkey">>, ECPubKey},
-                  {<<"t2_signature">>, T2Signature}]} = jiffy:decode(Body),
                 Response = mw_contract:submit_t2_signature(ContractId, ECPubKey,
                                                            T2Signature),
                 ?info("Respone: ~p", [Response]),
@@ -135,12 +137,13 @@ response(Req, 'get-t3-for-signing'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
+                {JSON, _} = cowboy_req:binding('json', Req),
+                {[{<<"contract_id">>, ContractId0},
+                  {<<"to_address">>, ToAddress}]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"to_address">>, ToAddress}]} = jiffy:decode(Body),
-                Response = mw_contract:get_t3_for_signing(ContractId, ToAddress),
+                Response =
+                    mw_contract:get_t3_for_signing(ContractId, ToAddress),
                 ?info("Respone: ~p", [Response]),
                 Response
         end,
@@ -152,14 +155,14 @@ response(Req, 'submit-t3-signatures'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:binding('contract-id', Req),
-                ContractId = erlang:list_to_integer(
-                               binary:bin_to_list(ContractId0)),
-                {ok, Body, _Req1} = cowboy_req:body(Req),
-                {[{<<"t3_raw">>, T3Raw},
+                {JSON, _} = cowboy_req:binding('json', Req),
+                {[{<<"contract_id">>, ContractId0},
+                  {<<"t3_raw">>, T3Raw},
                   {<<"t3_signature1">>, T3Signature1},
                   {<<"t3_signature2">>, T3Signature2}
-                 ]} = jiffy:decode(Body),
+                 ]} = jiffy:decode(JSON),
+                ContractId = erlang:list_to_integer(
+                               binary:bin_to_list(ContractId0)),
                 Response = mw_contract:submit_t3_signatures(ContractId,
                                                             T3Raw,
                                                             T3Signature1,

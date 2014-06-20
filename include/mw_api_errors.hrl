@@ -3,12 +3,13 @@
 %% Error code 0 is catch-all == "Unknown Error"
 -define(CONTRACT_ID_TYPE, {1, "contract id is not integer"}).
 
--define(PUBKEY_TYPE, {2, "pubkey is not base58check encoded binary"}).
+-define(EC_PUBKEY_TYPE, {2, "ec pubkey is not base58check encoded"}).
+-define(RSA_PUBKEY_TYPE, {22, "rsa pubkey is not pem encoded"}).
 -define(EC_PUBKEY_LEN, {3, "base58check ec pubkey is not correct length (51)"}).
--define(RSA_PUBKEY_LEN, {4, "hex enc rsa pubkey is not correct length (902)"}).
+-define(RSA_PUBKEY_LEN, {4, "pem encoded rsa pubkey is not correct length (???)"}).
 
--define(SIGNATURE_TYPE, {5, "signature is not hex encoded binary"}).
--define(SIGNATURE_LEN, {6, "signature length is not 73, 72 or 71 bytes"}).
+-define(SIGNATURE_TYPE, {5, "signature is not hex encoded"}).
+-define(SIGNATURE_LEN, {6, "signature length is not 73, 72 or 71"}).
 -define(EC_PUBKEY_MISMATCH, {7, "signing pubkey is not giver or taker"}).
 
 -define(CONTRACT_FULL, {8, "contract full; has giver and taker"}).
@@ -23,7 +24,7 @@
 -define(T2_NOT_BROADCASTED,
         {14, "T2 was not broadcasted. Please verify keys/signatures."}).
 
--define(ADDRESS_TYPE, {15, "address is not base58check encoded binary"}).
+-define(ADDRESS_TYPE, {15, "address is not base58check encoded"}).
 -define(ADDRESS_LEN, {16, "address is not 27-34 chars long"}).
 
 -define(NO_EVENT_OUTCOME, {17, "cannot get t3: no event outcome"}).

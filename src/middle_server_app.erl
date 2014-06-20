@@ -47,19 +47,21 @@ start(_Type, _Args) ->
     %% API
     %% -------------------------------------------------------------------
     %% define json hosts, pathes, their patterns and handlers
-    JSONDispatch = cowboy_router:compile(
-                     [
-                      {'_', [{"/hello", api_handler, hello},
-                             {"/sample", api_handler, sample},
-                             {"/bet-list", api_handler, 'bet-list'},
-                             {"/enter-contract/:contract-id", api_handler, 'enter-contract'},
-                             {"/clone-contract/:contract-id", api_handler, 'clone-contract'},
-                             {"/submit-t2-signature/:contract-id", api_handler, 'submit-t2-signature'},
-                             {"/get-t3-for-signing/:contract-id", api_handler, 'get-t3-for-signing'},
-                             {"/submit-t3-signatures/:contract-id", api_handler, 'submit-t3-signatures'}
-                            ]
-                      }
-                     ]),
+    JSONDispatch =
+        cowboy_router:compile(
+          [
+           {'_',
+            [{"/hello", api_handler, hello},
+             {"/sample", api_handler, sample},
+             {"/bet-list", api_handler, 'bet-list'},
+             {"/enter-contract/:json", api_handler, 'enter-contract'},
+             {"/clone-contract/:json", api_handler, 'clone-contract'},
+             {"/submit-t2-signature/:json", api_handler, 'submit-t2-signature'},
+             {"/get-t3-for-signing/:json", api_handler, 'get-t3-for-signing'},
+             {"/submit-t3-signatures/:json", api_handler, 'submit-t3-signatures'}
+            ]
+           }
+          ]),
 
     %% start cowboy json server
     {ok, _} = cowboy:start_http(json, 100, [{port, 8081}],

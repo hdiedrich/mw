@@ -55,23 +55,23 @@
 %% Validations throw error so JSON handler can return nice error code / msg
 %% Any unhandled error (crash) will return default json error code / msg
 enter_contract(ContractId, ECPubKey, RSAPubKey) ->
-    ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p",
-          [ContractId, ECPubKey]),
+    ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p"
+          "RSAPubKey: ~p", [ContractId, ECPubKey, RSAPubKey]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
 
     %% https://en.bitcoin.it/wiki/Base58Check_encoding
     %% compressed EC pubkeys in base58check encoding is 50 chars
     api_validation(is_binary(ECPubKey) andalso
                    is_binary(catch mw_lib:dec_b58check(ECPubKey)),
-                   ?PUBKEY_TYPE),
+                   ?EC_PUBKEY_TYPE),
     api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(RSAPubKey) andalso
-                   is_binary(catch mw_lib:hex_to_bin(RSAPubKey)),
-                   ?PUBKEY_TYPE),
-    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
-    %% 2048 bit RSA pubkey in pem encoding then hex encoded
-    api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
+                   %% http://erlang.org/doc/man/public_key.html#pem_decode-1
+                   length(catch public_key:pem_decode(RSAPubKey)) == 1,
+                   ?RSA_PUBKEY_TYPE),
+    %% TODO: what lengths can PEM encoded RSA 2048 pubkeys have?
+    % api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
 
     ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
     [{"success-message", "ok"}].
@@ -84,7 +84,7 @@ submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
 
     api_validation(is_binary(ECPubKey) andalso
                    is_binary(catch mw_lib:dec_b58check(ECPubKey)),
-                   ?PUBKEY_TYPE),
+                   ?EC_PUBKEY_TYPE),
     api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
 
     %% TODO: what's len of bitcoin tx signature?
@@ -108,10 +108,10 @@ get_t3_for_signing(ContractId, ToAddress) ->
 
     api_validation(is_binary(ToAddress) andalso
                    is_binary(catch mw_lib:dec_b58check(ToAddress)),
-                   ?PUBKEY_TYPE),
+                   ?ADDRESS_TYPE),
     api_validation((byte_size(ToAddress) >= 27) andalso
                    (byte_size(ToAddress) =< 34),
-                   ?EC_PUBKEY_LEN),
+                   ?ADDRESS_LEN),
 
     ResultJSON = do_get_t3_for_signing(ContractId, ToAddress),
     [{"success-message", "ok"}] ++ ResultJSON.
@@ -134,8 +134,8 @@ submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
                    SignSize == 72 orelse
                    SignSize == 71, ?SIGNATURE_LEN),
     %% TODO: return more stuff in JSON response?
-    JSONRes = do_submit_t3_signatures(ContractId,
-                                      T3Raw, T3Signature1, T3Signature2),
+    _JSONRes = do_submit_t3_signatures(ContractId,
+                                       T3Raw, T3Signature1, T3Signature2),
     [{"success-message", "ok"}].
 
 %%%===========================================================================
@@ -225,8 +225,8 @@ clone_contract(Id) ->
 
 create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %% Validations for EC keys
-    %%api_validation(is_binary(NOPubKey), ?PUBKEY_TYPE),
-    %%api_validation(is_binary(YESPubKey), ?PUBKEY_TYPE),
+    %%api_validation(is_binary(NOPubKey), ?EC_PUBKEY_TYPE),
+    %%api_validation(is_binary(YESPubKey), ?EC_PUBKEY_TYPE),
     %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
     %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
     {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
@@ -266,7 +266,7 @@ create_contract_event(Event) ->
 %% TODO: this assumes giver always enters first
 %% TODO: generalize
 do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
-    {ok, RSAPubKey} = pem_decode_bin(mw_lib:hex_to_bin(RSAPubKeyHex)),
+    {ok, RSAPubKey} = pem_decode_bin(RSAPubKeyHex),
     {YesOrNo, GiverOrTaker, _GiverKey} =
         case mw_pg:select_contract_ec_pubkeys(ContractId) of
             {ok, null, null}          -> {yes, giver, nope};
