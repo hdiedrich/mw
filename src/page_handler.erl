@@ -105,6 +105,7 @@ html(Req, {prep}=_State) ->
             merge(HTML,
               [{headline, Headline},
                {status, History},
+               {contract_id, Id},
                {dump, prop_to_html(Props)}
               ])
         end
@@ -245,7 +246,7 @@ placeholder(S) ->
 prop_to_html(Prop) ->
     io_lib:format("<pre>~p</pre>", [Prop]).
 
-%% make a html list from the contract events as they come from the DB 
+%% make a html list from the contract events as they come from the DB
 events_to_html([]) -> [];
 
 events_to_html([P | L]) ->
