@@ -137,6 +137,16 @@
   <script>
   
     // init    
+    console.log(ok = "init");
+
+Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
+   var hash = this.getPub();
+   while (hash.length < 32) hash.unshift(0);
+   var checksum = Crypto.SHA256(Crypto.SHA256(hash, {asBytes: true}), {asBytes: true});
+   var bytes = hash.concat(checksum.slice(0,4));
+   return Bitcoin.Base58.encode(bytes);
+ };
+
     console.log(ok = "start");
   
     // create eliptic key
@@ -157,8 +167,10 @@
     var ecPub = new BigInteger(ec.getPub()); // fills this.pub
     var ecPubHex = Crypto.util.bytesToHex(ec.getPub());
     var ecPub58 = Bitcoin.Base58.encode(ecPub.toByteArrayUnsigned());
+    var ecPubExp = ec.getExportedPublicKey();
     console.log("EC pub key (hex): " + ecPubHex);
     console.log("EC pub key (base58): " + ecPub58);
+    console.log("EC pub key (exported): " + ecPubExp);
 
     // Print pub key to screen
     var ECtag = document.getElementById("ECpub");
@@ -190,12 +202,15 @@
     var rsaPub = new RSAKey();
     rsaPub.setPublic(rsa.n, rsa.e);
     var rsaPubPEM = KEYUTIL.getPEM(rsaPub);
+    rsaPubPEMEnc = rsaPubPEM.replace(/\r/g, "\\r");
+    rsaPubPEMEnc = rsaPubPEMEnc.replace(/\n/g, "\\n");
+    var rsaPubPEMEnc = encodeURIComponent(rsaPubPEMEnc); 
   
     var ECtag = document.getElementById("ecPub58");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
 
     var ECtag = document.getElementById("rsa_pubkey");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsaPubPEM + "</font>";
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsaPubPEMEnc + "</font>";
 
     // Call to Mw
     // ----------
@@ -203,8 +218,8 @@
     var contract_id = "$CONTRACT_ID";
     var url = "http://127.0.0.1:8081/enter-contract/{" +
               "\"contract_id\":\"" + contract_id + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(ecPub58) + "\"," +
-              "\"rsa_pubkey\":\"" + encodeURIComponent(rsaPubPEM) + "\"}";
+              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubExp) + "\"," +
+              "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"}";
 
     var ECtag = document.getElementById("url");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
