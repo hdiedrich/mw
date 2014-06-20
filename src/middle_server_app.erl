@@ -85,9 +85,8 @@ start(_Type, _Args) ->
                              {"/flow.html",     page_handler, {flow}},
                              {"/prep/:id",      page_handler, {prep}},
                              {"/pend.html",     page_handler, {pend}},
-                             {"/sign.html",     page_handler, {sign}},
+                             {"/sign/:id",      page_handler, {sign}},
                              {"/followup.html", page_handler, {followup}},
-                             {"/status.html",   page_handler, {status}}, %-leg
                              {"/status/:id",    page_handler, {status}},
                              {"/events.html",   page_handler, {events}},
                              {"/cashout.html",  page_handler, {cashout}},

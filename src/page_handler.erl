@@ -1,15 +1,17 @@
 %%%-------------------------------------------------------------------------%%%
 %%% Description : Mw - AI Effect World Cup 2014 - Middle Server             %%%
-%%% Version     : 0.4.x/dynamic pages                                       %%%
+%%% Version     : 0.6.x/json flow                                           %%%
 %%% File        : page_handler.erl                                          %%%
 %%% Description : web site page creation, as a handler for Cowboy           %%%
 %%% Copyright   : AI Effect Group, Berlin                                   %%%
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 12 June 2014                                              %%%
+%%% Changed     : 21 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
+
+-include("mw_contract.hrl").
 
 %% REST Callbacks
 -export([init/3]).
@@ -115,9 +117,27 @@ html(_Req, {pend}=State) ->
     {Block} = State,
     block(Block);
 
-html(_Req, {sign}=State) ->
-    {Block} = State,
-    block(Block);
+html(Req, {sign}=_State) ->
+    {Id, _} = cowboy_req:binding(id, Req, none),
+    case Id of
+      none ->
+        "ID error";
+      _ ->
+        IdN = list_to_integer(binary_to_list(Id)),
+        case mw_contract:get_contract_info(IdN) of
+          {ok, Props} ->
+            History = proplists:get_value("history", Props, []),
+            case {mw_contract:contract_event_happened(
+                    History, ?STATE_DESC_GIVER_T1),
+                  mw_contract:contract_event_happened(
+                    History, ?STATE_DESC_TAKER_T1)} of
+              {true, true} ->
+                block(sign);
+              _ ->
+                block(wait)
+            end
+        end
+    end;
 
 html(_Req, {followup}=State) ->
     {Block} = State,
