@@ -77,7 +77,7 @@
   <p>
     <ul>
       <li>
-        <b>Please send $AMOUNT to <span id=addr2><font color=red>[An address should appear here.]</font></span></b>
+        <b>Please send BTC 0.02 to <span id=addr2><font color=red>[An address should appear here.]</font></span></b>
         <br />
         <br />
       </li>
@@ -102,16 +102,31 @@
         </ul>    
       </li>
     </ul>    
-
-      <p id=ec_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An EC pubkey should appear here.]</font></p>
-
-      <p id=rsa_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An RSA pubkey should appear here.]</font></p>
-    
-      <p id=ok style="font-family: monospace; white-space: pre;"><font color=red>[An ok message should appear here.]</font></p>
   </p>
 
+  <hr />
+
+  <h4>Notes</h4>
+  <p>
+    <ul>
+      <li><b>FYI, you EC pubkey is:</b>
+        <br />
+          <p id=ecPub58 style="font-family: monospace; white-space: pre;"><font color=red>[An EC pubkey should appear here.]</font></p>
+      </li>  
+      <li><b>FYI, you RSA pubkey is:</b>
+        <br />
+          <p id=rsa_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An RSA pubkey should appear here.]</font></p>
+      </li>  
+      <li><b>Debug info: Mw call</b>
+        <br />
+          <p id=url style="font-family: monospace; white-space: pre;"><font color=red>[An GET call should appear here.]</font></p>
+      </li>  
+    </ul>
+  </p>
+
+  <p id=ok style="font-family: monospace; white-space: pre;"><font color=red>[An ok message should appear here.]</font></p>
   <div id=result2 name=result2>
-      [ Some ok message should appear here. ]
+      <font color=red>[An Ajax message should appear here.]</font>
   </div>
 
   <hr>
@@ -122,15 +137,15 @@
   <script>
   
     // init    
-    console.log(ok = "init.");
+    console.log(ok = "start");
   
     // create eliptic key
-    console.log("create eliptic key");
     var ec = new Bitcoin.ECKey();
     ec.setCompressed(true);
+    var ecHex = ec.toString();
     var ec58 = Bitcoin.Base58.encode(ec.priv.toByteArrayUnsigned());
     var ecExp = ec.getExportedPrivateKey();
-    console.log("EC priv key (hex): " + ec.toString());
+    console.log("EC priv key (hex): " + ecHex);
     console.log("EC priv key (base58): " + ec58);
     console.log("EC priv key (exported): " + ecExp);
 
@@ -140,8 +155,9 @@
 
     // Same with pub part, print it
     var ecPub = new BigInteger(ec.getPub()); // fills this.pub
+    var ecPubHex = Crypto.util.bytesToHex(ec.getPub());
     var ecPub58 = Bitcoin.Base58.encode(ecPub.toByteArrayUnsigned());
-    console.log("EC pub key (hex): " + Crypto.util.bytesToHex(ec.getPub()));
+    console.log("EC pub key (hex): " + ecPubHex);
     console.log("EC pub key (base58): " + ecPub58);
 
     // Print pub key to screen
@@ -170,35 +186,35 @@
     var ECtag = document.getElementById("pem");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + pem + "</font>";
 
+    // create RSA pubkey PEM
+    var rsaPub = new RSAKey();
+    rsaPub.setPublic(rsa.n, rsa.e);
+    var rsaPubPEM = KEYUTIL.getPEM(rsaPub);
+  
+    var ECtag = document.getElementById("ecPub58");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
+
+    var ECtag = document.getElementById("rsa_pubkey");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsaPubPEM + "</font>";
 
     // Call to Mw
     // ----------
 
     var contract_id = "$CONTRACT_ID";
-    var ec_pubkey = ec58;
-    var rsa_pubkey = rsa.rsaPublicKey;
-  
-    var ECtag = document.getElementById("ec_pubkey");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ec_pubkey + "</font>";
-    var ECtag = document.getElementById("rsa_pubkey");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsa_pubkey + "</font>";
-
-    url = "http://127.0.0.1:8081/enter-contract/{" +
+    var url = "http://127.0.0.1:8081/enter-contract/{" +
               "\"contract_id\":\"" + contract_id + "\"," +
-              "\"ec_pubkey\":\"" + + "\","
-              "\"rsa_pubkey\":\"" + + "\"}";
+              "\"ec_pubkey\":\"" + encodeURIComponent(ecPub58) + "\"," +
+              "\"rsa_pubkey\":\"" + encodeURIComponent(rsaPubPEM) + "\"}";
+
+    var ECtag = document.getElementById("url");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
     
-    alert(url);
-    
-    /*
     $.ajax({
              url: url,
              success: function(response,status,xhr) { 
                 $( "#result2" ).html(xhr.responseText)
              }
              });
-    */      
-
 
     // Print an ok to screen and JS console.
     // -------------------------------------
