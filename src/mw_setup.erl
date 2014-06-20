@@ -55,7 +55,7 @@ insert_wc_bet({_N, Headline, Detail}) ->
                                      "test_keys/giver_keys1/rsa_pubkey.pem")),
     mw_contract:enter_contract(ContractId,
                                ECPubKey,
-                               mw_lib:bin_to_hex(RSAPubKey)),
+                               RSAPubKey),
     Total = erlang:get(mw_event_count),
     ?info("~p Inserted oracle_keys & event ~p (~s %)",
           [self(), OracleKeysId,
