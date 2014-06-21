@@ -154,12 +154,11 @@ get_contract_t2_state(Id) ->
 
     %% TODO: for now we simplify flow and assume both have sent T1
     %% when we get first T2 from Bj
-    case {contract_event_happened(History, ?STATE_DESC_GIVER_T1),
+    case {contract_event_happened(History, ?STATE_DESC_GIVER_ENTERED),
+          contract_event_happened(History, ?STATE_DESC_TAKER_ENTERED),
+          contract_event_happened(History, ?STATE_DESC_GIVER_T1),
           contract_event_happened(History, ?STATE_DESC_TAKER_T1)} of
-        {true, true} ->
-            %% waiting for signatures; unchanged state
-            {ok, Info};
-        {false, false} ->
+        {true, true, false, false} ->
             %% call Bj to see if t1 outputs are available as t2 inputs
             ReqRes = bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey,
                                             EventPubKey, Value),
@@ -171,16 +170,24 @@ get_contract_t2_state(Id) ->
                     T2SigHashInput1 = GetRes("t2-sighash-input-1"), %% taker
                     T2Raw = GetRes("t2-raw"), %% taker
                     T2Hash = GetRes("t2-hash"),
-                    ok = mw_pg:update_contract_t2(Id, T2SigHashInput0,
-                                                  T2SigHashInput1, T2Raw, T2Hash),
+                    ok = mw_pg:update_contract_t2(Id,
+                                                  T2SigHashInput0,
+                                                  T2SigHashInput1,
+                                                  T2Raw, T2Hash),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_GIVER_T1),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_TAKER_T1),
                     NewInfo = get_contract_info(Id),
                     {ok, NewInfo};
                 _ErrorMsg ->
-                    %% No t2 / sighashes from Bj: no T1 outputs available; unchanged state
+                    %% No t2 from Bj: no T1 outputs available; unchanged state
                     {ok, Info}
-            end
+            end;
+        {true, false, false, false} ->
+            %% MVP #2 state: only default giver has entered, taker has not
+            {ok, Info};
+        {true, true, true, true} ->
+            %% waiting for signatures; unchanged state
+            {ok, Info}
     end.
 
 get_contract_info(Id) ->
