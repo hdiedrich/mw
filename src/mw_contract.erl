@@ -169,7 +169,7 @@ get_contract_t2_state(Id) ->
                                                   T2Raw, T2Hash),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_GIVER_T1),
                     ok = mw_pg:insert_contract_event(Id, ?STATE_DESC_TAKER_T1),
-                    NewInfo = get_contract_info(Id),
+                    {ok, NewInfo} = get_contract_info(Id),
                     {ok, NewInfo};
                 _ErrorMsg ->
                     %% No t2 from Bj: no T1 outputs available; unchanged state
