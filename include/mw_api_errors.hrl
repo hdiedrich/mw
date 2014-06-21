@@ -8,8 +8,7 @@
 -define(EC_PUBKEY_LEN, {3, "base58check ec pubkey is not correct length (50)"}).
 -define(RSA_PUBKEY_LEN, {4, "pem encoded rsa pubkey is not correct length (???)"}).
 
--define(SIGNATURE_TYPE, {5, "signature is not hex encoded"}).
--define(SIGNATURE_LEN, {6, "signature length is not 73, 72 or 71"}).
+-define(SIGNATURE_TYPE, {5, "signature is not hex encoded der encoded"}).
 -define(EC_PUBKEY_MISMATCH, {7, "signing pubkey is not giver or taker"}).
 
 -define(CONTRACT_FULL, {8, "contract full; has giver and taker"}).
