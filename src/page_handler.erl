@@ -99,18 +99,27 @@ html(Req, {prep}=_State) ->
       none ->
         "ID error";
       _ ->
-        case mw_contract:get_contract_info(binary_to_integer(Id)) of
-          {ok, Props} ->
-            HTML = block(prep),
+            {ok, Props} = mw_contract:get_contract_info(binary_to_integer(Id)),
+            History = proplists:get_value("history", Props),
+            HTML =
+                case {mw_contract:contract_event_happened(
+                        History, ?STATE_DESC_GIVER_ENTERED),
+                      mw_contract:contract_event_happened(
+                        History, ?STATE_DESC_TAKER_ENTERED)} of
+                    {true, true} ->
+                        <<"<h4>Contract full. "
+                          "Please clone or use another contract.</h4>">>;
+                    _ ->
+                        block(prep)
+                end,
             Headline = proplists:get_value("headline", Props, <<"?">>),
-            History = events_to_html(proplists:get_value("history", Props)),
+            HistoryHTML = events_to_html(proplists:get_value("history", Props)),
             merge(HTML,
-              [{headline, Headline},
-               {status, History},
-               {contract_id, Id},
-               {dump, prop_to_html(Props)}
-              ])
-        end
+                  [{headline, Headline},
+                   {status, HistoryHTML},
+                   {contract_id, Id},
+                   {dump, prop_to_html(Props)}
+                  ])
     end;
 
 html(_Req, {pend}=State) ->
@@ -123,20 +132,18 @@ html(Req, {sign}=_State) ->
       none ->
         "ID error";
       _ ->
-        IdN = list_to_integer(binary_to_list(Id)),
-        case mw_contract:get_contract_info(IdN) of
-          {ok, Props} ->
-            History = proplists:get_value("history", Props, []),
+            IdN = list_to_integer(binary_to_list(Id)),
+            {ok, Props} = mw_contract:get_contract_t2_state(IdN),
+            History = proplists:get_value("history", Props),
             case {mw_contract:contract_event_happened(
                     History, ?STATE_DESC_GIVER_T1),
                   mw_contract:contract_event_happened(
                     History, ?STATE_DESC_TAKER_T1)} of
-              {true, true} ->
-                block(sign);
-              _ ->
-                block(wait)
+                {true, true} ->
+                    block(sign);
+                _ ->
+                    block(wait)
             end
-        end
     end;
 
 html(_Req, {followup}=State) ->
