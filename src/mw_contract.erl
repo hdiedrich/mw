@@ -87,16 +87,10 @@ submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
                    ?EC_PUBKEY_TYPE),
     api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
 
-    %% TODO: what's len of bitcoin tx signature?
-    api_validation(is_binary(T2Signature) andalso
-                   is_binary(catch mw_lib:hex_to_bin(T2Signature)),
+    api_validation(is_binary(catch mw_lib:hex_to_bin(T2Signature)),
                    ?SIGNATURE_TYPE),
-    %% ?info("rsa pubkey len ~p", [byte_size(RSAPubKey)]),
-    %% TODO: verify! Can it also be shorter?
-    SignSize = byte_size(T2Signature),
-    api_validation(SignSize == 73 orelse
-                   SignSize == 72 orelse
-                   SignSize == 71, ?SIGNATURE_LEN),
+    api_validation(bitcoin_signature_der(mw_lib:hex_to_bin(T2Signature)),
+                   ?SIGNATURE_TYPE),
 
     ok = do_submit_t2_signature(ContractId, ECPubKey, T2Signature),
     [{"success-message", "ok"}].
@@ -122,17 +116,16 @@ submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
           [ContractId, T3Signature1, T3Signature2]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
 
-    %% TODO: validate t3_raw
+    api_validation(is_binary(catch mw_lib:hex_to_bin(T3Signature1)),
+                   ?SIGNATURE_TYPE),
+    api_validation(bitcoin_signature_der(mw_lib:hex_to_bin(T3Signature1)),
+                   ?SIGNATURE_TYPE),
 
-    SignSize = byte_size(T3Signature1),
-    api_validation(SignSize == 73 orelse
-                   SignSize == 72 orelse
-                   SignSize == 71, ?SIGNATURE_LEN),
+    api_validation(is_binary(catch mw_lib:hex_to_bin(T3Signature2)),
+                   ?SIGNATURE_TYPE),
+    api_validation(bitcoin_signature_der(mw_lib:hex_to_bin(T3Signature2)),
+                   ?SIGNATURE_TYPE),
 
-    SignSize = byte_size(T3Signature2),
-    api_validation(SignSize == 73 orelse
-                   SignSize == 72 orelse
-                   SignSize == 71, ?SIGNATURE_LEN),
     %% TODO: return more stuff in JSON response?
     _JSONRes = do_submit_t3_signatures(ContractId,
                                        T3Raw, T3Signature1, T3Signature2),
@@ -488,6 +481,9 @@ bj_req_submit_t3_signatures(T3Raw, T3Signature1, T3Signature2) ->
                                      $?, QS/binary>>, [], 5000)
         end,
     Res.
+
+bitcoin_signature_der(<<48,_,2,RL,_R:RL/bytes,2,SL,_S:SL/bytes>>) -> true;
+bitcoin_signature_der(_Bin)                                       -> false.
 
 pem_decode_bin(Bin) ->
     [Entry] = public_key:pem_decode(Bin),
