@@ -166,7 +166,7 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
 
     // Print priv key to screen
     var ECtag = document.getElementById("ECpriv");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ec58 + "</font>";
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecExp + "</font>";
 
     // Same with pub part, print it
     var ecPub = new BigInteger(ec.getPub()); // fills this.pub
@@ -179,9 +179,9 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
 
     // Print pub key to screen
     var ECtag = document.getElementById("ECpub");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
     var ECtag = document.getElementById("addr2");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
     
     // Address
     // -------

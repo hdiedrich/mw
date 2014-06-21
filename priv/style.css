@@ -29,6 +29,9 @@ textarea        { width: 100%;
 input           { width: 100%;
                 }
 
+button          { width: 10em;
+                }
+
 .btc            { width: 5em;
                 }
 

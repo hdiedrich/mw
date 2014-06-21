@@ -126,6 +126,7 @@ html(_Req, {pend}=State) ->
     {Block} = State,
     block(Block);
 
+%% wait for T1 arriving, or offer to sign T2
 html(Req, {sign}=_State) ->
     {Id, _} = cowboy_req:binding(id, Req, none),
     case Id of
@@ -140,9 +141,9 @@ html(Req, {sign}=_State) ->
                   mw_contract:contract_event_happened(
                     History, ?STATE_DESC_TAKER_T1)} of
                 {true, true} ->
-                    block(sign);
+                    merge(block(sign), [{contract_id, Id}] ++ Props);
                 _ ->
-                    block(wait)
+                    merge(block(wait), [{contract_id, Id}])
             end
     end;
 
@@ -249,12 +250,11 @@ merge(Template, [{Tag, Value} | Data]) ->
     Replaced = re:replace(Template, Search, String, [global, {return, list}]),
     merge(Replaced, Data).
 
-to_list(A) when is_list(A) ->
+to_list([H|_]=A) when is_list(A), is_integer(H) ->
     A;
 
-to_list(A) when is_atom(A) ->
-    atom_to_list(A);
-
+to_list(A) when is_list(A) ->
+    io_lib:format("~p", [A]);
 
 to_list(A) when is_atom(A) ->
     atom_to_list(A);
