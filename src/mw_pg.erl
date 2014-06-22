@@ -120,6 +120,17 @@ select_contract_ec_pubkeys(Id) ->
             {error, Other}
     end.
 
+select_event_id(ContractId) ->
+    Statement =
+        "SELECT c.event_id "
+        "FROM contracts c "
+        "WHERE c.id = $1;",
+    {ok, [[{<<"event_id">>, EventId}]]} =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement,
+                           [mw_pg_lib:ensure_epgsql_type(ContractId)])),
+    {ok, EventId}.
+
 insert_contract(EventId) ->
     Statement =
         "INSERT INTO contracts (event_id) "

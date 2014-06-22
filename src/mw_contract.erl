@@ -248,8 +248,18 @@ create_event(MatchNum, Headline, Desc, OracleKeysId,
                            EventPrivKeyEncWithOracleYesKey),
     {ok, EventId}.
 
+
 add_event_outcome(EventId, Outcome) when (Outcome =:= true) orelse
                                          (Outcome =:= false) ->
+    ok = mw_pg:update_event(EventId, Outcome),
+    {ok, ContractIds} = mw_pg:select_contracts_of_event(EventId),
+    Event = ?STATE_DESC_EVENT_OUTCOME_HAPPENED,
+    [ok = mw_pg:insert_contract_event(Id, Event) || Id <- ContractIds],
+    ok.
+
+add_contract_outcome(ContractId, Outcome) when (Outcome =:= true) orelse
+                                               (Outcome =:= false) ->
+    {ok, EventId} = mw_pg:select_event_id(ContractId),
     ok = mw_pg:update_event(EventId, Outcome),
     {ok, ContractIds} = mw_pg:select_contracts_of_event(EventId),
     Event = ?STATE_DESC_EVENT_OUTCOME_HAPPENED,
