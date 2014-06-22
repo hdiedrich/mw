@@ -513,8 +513,8 @@ rsa_key_from_file(PrivPath) ->
     Bin.
 
 hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
-    %% TODO: validate entropy source! We may want to add extra entropy to be
-    %% absolutely sure the AES key is cryptographically strong
+    %% TODO: validate entropy source! We may want to block for /dev/random
+    %% to be sure the AES key is cryptographically strong.
     AESKey = crypto:strong_rand_bytes(16),
     %% PKCS #7 padding; value of each padding byte is the integer representation
     %% of the number of padding bytes. We align to 16 bytes.
@@ -574,5 +574,10 @@ manual_test_2() ->
     {ok, _} = create_contract(1),
     ok.
 
-decryption_test() ->
+decryption_test(UserECPrivKey, UserRSAPrivKey, OraclePrivKey, EncEventKey) ->
+    <<_Prefix:8/binary, EncAESKey:128/bytes, CipherText1/binary>> = EncEventKey,
+    AESKey = public_key:decrypt_public(EncAESKey, UserRSAPrivKey),
+    Plaintext1 = crypto:block_decrypt(aes_cbc128, AESKey,
+                                      ?DEFAULT_AES_IV, CipherText1),
+    ?info("Plaintext: ~p", [Plaintext1]),
     ok.
