@@ -7,7 +7,7 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 21 June 2014                                              %%%
+%%% Changed     : 22 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
@@ -51,9 +51,11 @@ content_types_provided(Req, State) ->
 page(Req, State) ->
     {Block} = State,
     Title = erlang:iolist_to_binary("AIX WC 14 - " ++ atom_to_list(Block)),
+    %% TODO should be {Req, Middle, State} = html(Req, State) to not loose ReqN
+    Middle = html(Req, State),
     Body  = erlang:iolist_to_binary([
                                      block("head.html"),
-                                     html(Req, State),
+                                     Middle,
                                      block("foot.html")]),
     HTML = [<<"<!DOCTYPE html><html><head><title>">>,
             Title,
@@ -63,7 +65,7 @@ page(Req, State) ->
     {HTML, Req, somepath}. %% TODO somepath?
 
 %% home page inner html
-html(_Req, {index}=State) ->
+html(_Req, {index}=_State) ->
     Bin = block(index),
     {ok, Data} = mw_pg:select_contract_infos(),
     merge(Bin, [{betlist, bets_html(Data)}]);
@@ -169,14 +171,23 @@ html(Req, {status}=_State) ->
         end
     end;
 
-html(_Req, {cashout}=State) ->
-    {Block} = State, block(Block);
+html(_Req, {cashout}=_State) ->
+    block(cashout);
+
+html(Req, {cashout2}=_State) ->
+    block(cashout2),
+	{Id, Req2} = cowboy_req:qs_val(<<"contract_id">>, Req),
+	{ToAddress, _Req3} = cowboy_req:qs_val(<<"to_address">>, Req2),
+    io:format("~nid: ~p, addr: ~p~n", [Id, ToAddress]),
+    io_lib:format("~nid: ~p, addr: ~p~n", [Id, ToAddress]);
 
 html(_Req, {wrapup}=State) ->
-    {Block} = State, block(Block);
+    {Block} = State,
+    block(Block);
 
 html(_Req, {over}=State) ->
-    {Block} = State, block(Block);
+    {Block} = State,
+    block(Block);
 
 html(_Req, State) ->
     placeholder(io_lib:format("~p ?", [State])).

@@ -90,6 +90,7 @@ start(_Type, _Args) ->
                              {"/status/:id",    page_handler, {status}},
                              {"/events.html",   page_handler, {events}},
                              {"/cashout.html",  page_handler, {cashout}},
+                             {"/cashout2.html", page_handler, {cashout2}},
                              {"/wrapup.html",   page_handler, {wrapup}},
                              {"/over.html",     page_handler, {over}},
                              {"/[...]", cowboy_static,

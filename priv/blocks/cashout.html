@@ -5,32 +5,38 @@
   <p>
     <ll>
       <li> 
-        Current status: $STATUS
+        $HEADLINE
       </li>
     </ll>  
   </p>
 
+  <p>
+    So you won? Awesome!
+  </p>
 
   <h4>Instructions</h4>
+  <form method=get action=/checkout2>
   <p>
     <ll>
-      <li> 
-        Below, please paste your private key that you copied earlier.
+      <li>
+        Please enter the CONTRACT ID: <br />
+        <input name=contract_id class=mark />
+        <br />
+        <br />
       </li>
-      <li> 
-        Also paste the Winning Key that you received.
-      </li>
-      <li> 
-        And an address from your wallet to transfer the won amount to.
-      </li>
-      <li> 
-        Clicking 'cashout' will transfer the winning amount into your wallet.
+      <li>
+        Please paste an address from your wallet to transfer the won amount to:
+        <textarea name=to_address class=mark>...</textarea>
+        <br />
       </li>
     </ll>  
   </p>
-
   <p>
-    <a href=wrapup.html>cashout</a>
+    <button class=mark>next</button>
+  </p>
+  </form>
+
+  <p id=status>
   </p>
 
   <hr />
@@ -38,6 +44,10 @@
   <h4>Notes</h4>
   <p>
     <ll>
+      <li> 
+        Check out your wallets docs to understand how to retrieve 
+        an address from it.
+      </li>
       <li> 
         We do not hold the money at any time, it is locked in the blockchain.
       </li>
