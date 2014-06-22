@@ -221,21 +221,38 @@ insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
         mw_pg_lib:parse_insert_result(mw_pg_lib:equery(Statement, Params)),
     {ok, NewId}.
 
-select_oracle_keys(_Id) ->
+select_oracle_keys(Id) ->
     Statement =
         "SELECT ok.rsa_no_pubkey, ok.rsa_yes_pubkey "
         "FROM oracle_keys ok "
-        "LIMIT 1;",
-    %% TODO: change to support multiple oracles
-    %% "WHERE ok.id = $1;",
+        "WHERE ok.id = $1;",
     {ok, [[{<<"rsa_no_pubkey">>, NoPubKey},
            {<<"rsa_yes_pubkey">>, YesPubKey}]]} =
         mw_pg_lib:parse_select_result(
           mw_pg_lib:equery(Statement,
                            [
-                            %% mw_pg_lib:ensure_epgsql_type(Id)
+                            mw_pg_lib:ensure_epgsql_type(Id)
                            ])),
     {ok, NoPubKey, YesPubKey}.
+
+select_oracle_privkey(ContractId, YesOrNo) ->
+    Column = case YesOrNo of
+                 yes -> "rsa_yes_privkey";
+                 no  -> "rsa_no_privkey"
+             end,
+    Statement =
+        "SELECT ok." ++ Column ++ " "
+        "FROM contracts c, events e, oracle_keys ok "
+        "WHERE ok.id = e.oracle_keys_id "
+        "AND e.id = c.event_id "
+        "AND c.id = $1;",
+    {ok, [[{_, Key}]]} =
+        mw_pg_lib:parse_select_result(
+          mw_pg_lib:equery(Statement,
+                           [
+                            mw_pg_lib:ensure_epgsql_type(ContractId)
+                           ])),
+    {ok, Key}.
 
 select_enc_event_privkey(ContractId, YesOrNo) ->
     TabName = case YesOrNo of

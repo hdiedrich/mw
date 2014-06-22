@@ -29,7 +29,7 @@ start(_Type, _Args) ->
     application:load(mw),
     application:set_env(mw, pools,
                         [
-                         {pgsql_pool, [{size, 2}, {max_overflow, 2}],
+                         {pgsql_pool, [{size, 1}, {max_overflow, 1}],
                           [
                            {host, "localhost"},
                            {dbname, "mw"},
@@ -57,7 +57,7 @@ start(_Type, _Args) ->
              {"/enter-contract/:json", api_handler, 'enter-contract'},
              {"/clone-contract/:json", api_handler, 'clone-contract'},
              {"/submit-t2-signature/:json", api_handler, 'submit-t2-signature'},
-             {"/get-t3-for-signing/:json", api_handler, 'get-t3-for-signing'},
+             {"/get-t3-for-signing/", api_handler, 'get-t3-for-signing'},
              {"/submit-t3-signatures/:json", api_handler, 'submit-t3-signatures'}
             ]
            }

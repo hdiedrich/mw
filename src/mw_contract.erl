@@ -229,7 +229,8 @@ create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
     %%api_validation(is_binary(YESPubKey), ?EC_PUBKEY_TYPE),
     %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
     %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
-    {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey),
+    {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey,
+                                        YesPubKey, YesPrivKey),
     {ok, Id}.
 
 create_event(MatchNum, Headline, Desc, OracleKeysId,
@@ -340,7 +341,17 @@ do_get_t3_for_signing(ContractId, ToAddress) ->
             T3Sighash  = proplists:get_value("t3-sighash", ReqRes),
             T3Hash  = proplists:get_value("t3-hash", ReqRes),
             T3Raw = proplists:get_value("t3-raw",  ReqRes),
+            %% TODO: here we act as oracle, sending oracle yes/no privkey
+            %% depending on event outcome. In future, this could be done by
+            %% external oracle(s) and we would instead grab it from e.g. their
+            %% website or somesuch
+            {ok, OraclePrivKey} =
+                case GetInfo("outcome") of
+                    true -> mw_pg:select_oracle_privkey(ContractId, yes);
+                    false -> mw_pg:select_oracle_privkey(ContractId, no)
+                end,
             [
+             {"oracle_privkey", OraclePrivKey},
              {"t3-sighash", T3Sighash},
              {"t3-hash", T3Hash},
              {"t3-raw", T3Raw}
