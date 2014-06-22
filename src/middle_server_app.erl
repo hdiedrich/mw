@@ -57,7 +57,7 @@ start(_Type, _Args) ->
              {"/enter-contract/:json", api_handler, 'enter-contract'},
              {"/clone-contract/:json", api_handler, 'clone-contract'},
              {"/submit-t2-signature/:json", api_handler, 'submit-t2-signature'},
-             {"/get-t3-for-signing/", api_handler, 'get-t3-for-signing'},
+             {"/get-t3-for-signing/:json", api_handler, 'get-t3-for-signing'},
              {"/submit-t3-signatures/:json", api_handler, 'submit-t3-signatures'}
             ]
            }
