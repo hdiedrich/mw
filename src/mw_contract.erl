@@ -345,13 +345,18 @@ do_get_t3_for_signing(ContractId, ToAddress) ->
             %% depending on event outcome. In future, this could be done by
             %% external oracle(s) and we would instead grab it from e.g. their
             %% website or somesuch
-            {ok, OraclePrivKey} =
+            {YesOrNo, EventKeyName} =
                 case GetInfo("outcome") of
-                    true -> mw_pg:select_oracle_privkey(ContractId, yes);
-                    false -> mw_pg:select_oracle_privkey(ContractId, no)
+                    true ->
+                        {yes, "event_key_enc_with_oracle_yes_and_giver_keys"};
+                    false ->
+                        {no, "event_key_enc_with_oracle_no_and_taker_keys"}
                 end,
+            {ok, OPK} = mw_pg:select_oracle_privkey(ContractId, YesOrNo),
+            EncEventKey = mw_lib:bin_to_hex(GetInfo(EventKeyName)),
             [
-             {"oracle_privkey", OraclePrivKey},
+             {"oracle_privkey", OPK},
+             {"enc_event_privkey", EncEventKey},
              {"t3-sighash", T3Sighash},
              {"t3-hash", T3Hash},
              {"t3-raw", T3Raw}
@@ -567,4 +572,7 @@ manual_test_1() ->
 
 manual_test_2() ->
     {ok, _} = create_contract(1),
+    ok.
+
+decryption_test() ->
     ok.
