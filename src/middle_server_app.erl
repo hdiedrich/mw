@@ -7,7 +7,7 @@
 %%% Author      : H. Diedrich <hd2010@eonblast.com>                         %%%
 %%% License     : MIT                                                       %%%
 %%% Created     : 24 May 2014                                               %%%
-%%% Changed     : 12 June 2014                                              %%%
+%%% Changed     : 22 June 2014                                              %%%
 %%%-------------------------------------------------------------------------%%%
 %%%                                                                         %%%
 %%%  The AIX WC14 concept enables football bets on the Bitcoin blockchain   %%%

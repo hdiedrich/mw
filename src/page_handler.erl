@@ -68,7 +68,7 @@ page(Req, State) ->
 html(_Req, {index}=_State) ->
     Bin = block(index),
     {ok, Data} = mw_pg:select_contract_infos(),
-    merge(Bin, [{betlist, bets_html(Data)}]);
+    merge(Bin, [{betlist, list_to_binary(bets_html(Data))}]);
 
 %% bet list inner html
 html(_Req, {bets}=_State) ->
@@ -171,15 +171,29 @@ html(Req, {status}=_State) ->
         end
     end;
 
+%% enter to-address for payout
 html(_Req, {cashout}=_State) ->
     block(cashout);
 
+%% enter keys for payout
 html(Req, {cashout2}=_State) ->
-    block(cashout2),
-	{Id, Req2} = cowboy_req:qs_val(<<"contract_id">>, Req),
-	{ToAddress, _Req3} = cowboy_req:qs_val(<<"to_address">>, Req2),
-    io:format("~nid: ~p, addr: ~p~n", [Id, ToAddress]),
-    io_lib:format("~nid: ~p, addr: ~p~n", [Id, ToAddress]);
+    {Id0, Req2} = cowboy_req:qs_val(<<"contract_id">>, Req),
+    case Id0 of
+      none ->
+        "ID error";
+      _ ->
+        try
+          Id = binary_to_integer(Id0),
+	      {ToAddress, _Req3} = cowboy_req:qs_val(<<"to_address">>, Req2),
+          Props = mw_contract:get_t3_for_signing(Id, ToAddress),
+          merge(block(cashout2),
+            Props ++
+            [{contract_id, Id},
+             {to_address, ToAddress}])
+        catch
+          X:Y -> io_lib:format("no play ~p ~p~n", [X, Y])
+        end
+    end;
 
 html(_Req, {wrapup}=State) ->
     {Block} = State,
@@ -263,6 +277,9 @@ merge(Template, [{Tag, Value} | Data]) ->
 
 to_list([H|_]=A) when is_list(A), is_integer(H) ->
     A;
+
+to_list([H|[]]) ->
+    io_lib:format("~p", [H]);
 
 to_list(A) when is_list(A) ->
     io_lib:format("~p", [A]);

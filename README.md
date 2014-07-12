@@ -191,7 +191,22 @@ psql mw < priv/postgres/mw_db_drop_all
 psql mw < priv/postgres/mw_db_init
 ```
 
-You will have to give all privileges again unless you don't.
+You will have to give all privileges again unless you're Gustav.
+
+``` bash
+psql -d mw
+# granting privileges
+grant all privileges on schema public to mw;
+grant all privileges on oracle_keys to mw;
+grant all privileges on sequence oracle_keys_id_seq to mw;
+grant all privileges on events to mw;
+grant all privileges on sequence events_id_seq  to mw;
+grant all privileges on contracts  to mw;
+grant all privileges on sequence contracts_id_seq to mw;
+grant all privileges on contract_events to mw;
+grant all privileges on sequence contract_events_id_seq to mw;
+grant all privileges on contract_events_maps to mw;
+```
 
 Create some default events with dummy giver already entered (must do to call test pages prep/n etc):
 
@@ -199,10 +214,10 @@ Create some default events with dummy giver already entered (must do to call tes
 mw_setup:insert_world_cup_events().
 ```
 
-Enter taker:
+To enter a taker into an event, do the following.
 
 ``` bash
-curl -v -H "Accept: application/json" -H "Content-type: applicatjson" "http://127.0.0.1:8081/enter-contract/\{\"contract_id\":\"5\",\"ec_pubkey\":\"6AymbcmHNSVXXcYh2HQDqNZc4HGHL2GwaTTYKDNgZtiDJvZQXN\",\"rsa_pubkey\":\"-----BEGIN%20PUBLIC%20KEY-----%5Cr%5CnMIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHuMkwMNQwToUtGApry8GyuBlOpv%5Cr%5CnJBKtKnKh46VWeLWziIV%2BPve2PdoOBB9%2BHCHYZwAcHDJe5%2FV0bN1RsCZk6WryIFx5%5Cr%5Cn3LfrTR7vp48QZARiPwVAQzkfRwBxw9TqddubngASXMdvVkvZJNNKGKqCipIiETuR%5Cr%5Cn%2BvbexI5HKBLt86fdAgMBAAE%3D%5Cr%5Cn-----END%20PUBLIC%20KEY-----%5Cr%5Cn\"\}" 
+curl -v -H "Accept: application/json" -H "Content-type: applicatjson" "http://127.0.0.1:8081/enter-contract/\{\"contract_id\":\"5\",\"ec_pubkey\":\"6AymbcmHNSVXXcYh2HQDqNZc4HGHL2GwaTTYKDNgZtiDJvZQXN\",\"rsa_pubkey\":\"-----BEGIN%20PUBLIC%20KEY-----%5Cr%5CnMIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHuMkwMNQwToUtGApry8GyuBlOpv%5Cr%5CnJBKtKnKh46VWeLWziIV%2BPve2PdoOBB9%2BHCHYZwAcHDJe5%2FV0bN1RsCZk6WryIFx5%5Cr%5Cn3LfrTR7vp48QZARiPwVAQzkfRwBxw9TqddubngASXMdvVkvZJNNKGKqCipIiETuR%5Cr%5Cn%2BvbexI5HKBLt86fdAgMBAAE%3D%5Cr%5Cn-----END%20PUBLIC%20KEY-----%5Cr%5Cn\"\}"
 ```
 
 This function should be called by the website when updating the contract page. This calls Bj to build T2 and then adds it to SQL:

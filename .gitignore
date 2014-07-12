@@ -13,6 +13,7 @@ _rel
 deps
 ebin
 logs
+logfile
 relx
 test/*.beam
 .eunit

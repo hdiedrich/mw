@@ -107,8 +107,8 @@ get_t3_for_signing(ContractId, ToAddress) ->
                    (byte_size(ToAddress) =< 34),
                    ?ADDRESS_LEN),
 
-    ResultJSON = do_get_t3_for_signing(ContractId, ToAddress),
-    [{"success-message", "ok"}] ++ ResultJSON.
+    ResultProps = do_get_t3_for_signing(ContractId, ToAddress),
+    [{"success-message", "ok"}] ++ ResultProps.
 
 submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
     ?info("Handling submit_t3_signatures with ContractId: ~p "
@@ -408,6 +408,16 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
             {<<"event-pubkey">>, EventPubKey},
             {<<"value">>, Value}
            ]),
+    %% TODO: delete this log
+    log(?BJ_URL_GET_UNSIGNED_T2, QS,
+                {ok,
+                 [
+                  {"t2-sighash-input-0", "A1EFFEC100000000FF01"},
+                  {"t2-sighash-input-1", "A1EFFEC100000000FF02"},
+                  {"t2-raw", "A1EFFEC100000000FF03"},
+                  {"t2-hash", "A1EFFEC100000000FF33"}
+                 ]
+                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
         case ?BJ_MOCKED of
@@ -434,6 +444,15 @@ bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker) ->
             {<<"pubkey">>, ECPubKey},
             {<<"sign-for">>, GiverOrTaker}
            ]),
+    %% TODO: delete this log
+    log(?BJ_URL_SUBMIT_T2_SIGNATURE, QS,
+                {ok,
+                 [
+                  {"new-t2-hash", "A1EFFEC100000000FF04"},
+                  {"t2-raw-partially-signed", "A1EFFEC100000000FF05"},
+                  {"t2-broadcasted", "true"}
+                 ]
+                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
         case ?BJ_MOCKED of
@@ -457,6 +476,15 @@ bj_req_get_unsigned_t3(T2Hash, ToAddress) ->
             {<<"t2-hash">>, T2Hash},
             {<<"to-address">>, ToAddress}
            ]),
+    %% TODO: delete this log
+    log(?BJ_URL_GET_UNSIGNED_T3, QS,
+              {ok,
+                 [
+                  {"t3-sighash", "A1EFFEC100000000FF06"},
+                  {"t3-hash", "A1EFFEC100000000FF07"},
+                  {"t3-raw", "A1EFFEC100000000FF08"}
+                 ]
+                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
         case ?BJ_MOCKED of
@@ -481,6 +509,15 @@ bj_req_submit_t3_signatures(T3Raw, T3Signature1, T3Signature2) ->
             {<<"t3-signature1">>, T3Signature1},
             {<<"t3-signature2">>, T3Signature2}
            ]),
+    %% TODO: delete this log
+    log(?BJ_URL_SUBMIT_T3_SIGNATURES, QS,
+              {ok,
+                 [
+                  {"new-t3-hash", "A1EFFEC100000000FF09"},
+                  {"new-t3-raw", "A1EFFEC100000000FF10"},
+                  {"t3-broadcasted", "true"}
+                 ]
+                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
         case ?BJ_MOCKED of
@@ -493,7 +530,7 @@ bj_req_submit_t3_signatures(T3Raw, T3Signature1, T3Signature2) ->
                  ]
                  };
             false ->
-                mw_lib:bj_http_req(<<?BJ_URL_SUBMIT_T3_SIGNATURES /binary,
+                mw_lib:bj_http_req(<<?BJ_URL_SUBMIT_T3_SIGNATURES/binary,
                                      $?, QS/binary>>, [], 5000)
         end,
     Res.
@@ -576,3 +613,9 @@ manual_test_2() ->
 
 decryption_test() ->
     ok.
+
+log(Call, Param, Expect) ->
+    ?info(
+        list_to_binary(
+            io_lib:format("-----------------------~ncall: ~p~nparameter: ~p~nexpected response: ~p~n",
+                [Call, Param, Expect]))).

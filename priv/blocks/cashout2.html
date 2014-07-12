@@ -1,32 +1,41 @@
+NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
+
 <div class=main>
 
   <h3>Cashout</h3>
 
   <p>
     <ll>
-      <li> 
-        Current status: $STATUS
+      <li>
+        $HEADLINE
       </li>
-    </ll>  
+    </ll>
   </p>
-
 
   <h4>Instructions</h4>
   <p>
     <ll>
-      <li> 
-        Below, please paste your private key that you copied earlier.
+      <li>
+        Please paste your SIGNATURE KEY that you copied earlier:
+        <textarea id=ec58check class=mark>...</textarea>
+        <br />
       </li>
-      <li> 
-        Also paste the Winning Key that you received.
+      <li>
+        Please paste the SECURITY KEY that you copied earlier:
+        <textarea id=rsaPEM class=mark>...</textarea>
+        <br />
       </li>
-      <li> 
-        And an address from your wallet to transfer the won amount to.
+      <li>
+        This is your double-encrypted WINNING KEY:
+        <textarea id=ev class=mark>...</textarea>
+        <br />
       </li>
-      <li> 
-        Clicking 'cashout' will transfer the winning amount into your wallet.
+      <li>
+        This is the revealed ORACLE KEY:
+        <textarea id=oracle class=mark>$ORACLE_PRIVKEY</textarea>
+        <br />
       </li>
-    </ll>  
+    </ll>
   </p>
 
   <p>
@@ -37,11 +46,261 @@
 
   <h4>Notes</h4>
   <p>
-    <ll>
-      <li> 
-        We do not hold the money at any time, it is locked in the blockchain.
+    <ul>
+      <li>
+        Technically, what happens here is this:
+        <ul>
+          <li>
+             the double-encrypted WINNING KEY is now decrypted
+            <ul>
+              <li>
+                 .. using your personal, one time SECURITY KEY
+              </li>
+              <li>
+                 .. and the ORACLE KEY that was released upon the event's conclusion
+              </li>
+              <li>
+                 the resulting is the decrypted WINNING KEY.
+              </li>
+            </ul>
+          </li>
+          <li>
+             This is used to unlock the waged amount in the betting contract
+          </li>
+            <ul>
+              <li>
+                 .. signing it with this WINNING KEY and also
+              </li>
+              <li>
+                 .. signing it with your SIGNATURE KEY
+              </li>
+              <li>
+                 .. to transfer the amount to the address you entered on the previous page.
+              </li>
+            </ul>
+          <li>
+             After you click 'sign' the Bitcoins should arrive in your wallet after about 10 minutes.
+          </li>
+        </ul>
       </li>
-    </ll>
+      <li>
+        We never held the money, it was locked into the blockchain.
+      </li>
+      <li>
+        The money is fully yours the moment you receive the WINNING KEY.
+      </li>
+        <ul>
+          <li>
+            .. even if you do not execute this page, you safely own the won Bitcoins
+          </li>
+          <li>
+            .. this page mererly helps you to put the won Bitcoins back into your wallet
+          </li>
+          <li>
+            .. but note that you might loose Bitcoins that are not moved for 10 years, or less
+          </li>
+        </ul>
+      <li>
+        Contract ID: $CONTRACT_ID
+      </li>
+      <li>
+        TO address: $TO_ADDRESS
+      </li>
+      <li>
+        Oracle Privkey: $ORACLE_PRIVKEY
+      </li>
+      <li>
+        Enc Event Privkey: $ENC_EVENT_PRIVKEY
+      </li>
+      <li>
+        T3 Sig Hash: $T3-SIGHASH
+      </li>
+      <li>
+        T3 Hash: $T3-HASH
+      </li>
+      <li>
+        T3 Raw: $T3-RAW
+      </li>
+    </ul>
   </p>
 
 </div>
+
+
+  <!-- LIBS -->
+
+  <!-- BitcoinJS -->
+
+  <script type="text/javascript" src="../bitcoinjs/crypto-js/crypto.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/crypto-js/sha256.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/crypto-js/ripemd160.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/jsbn/prng4.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/jsbn/rng.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/jsbn/jsbn.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/jsbn/jsbn2.js"></script>
+
+  <script type="text/javascript" src="../bitcoinjs/jsbn/ec.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/jsbn/sec.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/events/eventemitter.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/bitcoin.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/util.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/base58.js"></script>
+
+  <script type="text/javascript" src="../bitcoinjs/address.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/ecdsa.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/eckey.js"></script>
+  <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
+
+  <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
+
+  <!-- RSA -->
+
+  <!-- for pkcs5pkey -->
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
+  <!-- for crypto -->
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
+  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
+  <!-- for crypto, asn1, asn1x509 -->
+  <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script>
+  <!-- for asn1x509(stohex) -->
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/base64x-1.1.min.js"></script>
+
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/prng4.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa2.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/base64.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1hex-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsapem-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/rsasign-1.2.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/x509-1.1.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/pkcs5pkey-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1x509-1.0.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/crypto-1.1.js"></script>
+
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec-patch.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ecdsa-modified-1.0.js"></script>
+
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/keyutil-1.0.js"></script>
+
+  <!-- jQuery -->
+
+  <script type="text/javascript" src="/jquery/jquery-1.11.1.min.js"></script>
+
+<script>
+
+  Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
+    var hash = this.getPub();
+    while (hash.length < 32) hash.unshift(0);
+    var checksum = Crypto.SHA256(Crypto.SHA256(hash, {asBytes: true}), {asBytes: true});
+    var bytes = hash.concat(checksum.slice(0,4));
+    return Bitcoin.Base58.encode(bytes);
+  };
+
+  function fail(text) {
+    var ws = document.getElementById("status");
+    if(ws) ws.innerHTML = "<font color=red>" + text + "</font>";
+  }
+
+  function sign() {
+
+    console.log("sign():");
+
+    var contract_id = "$CONTRACT_ID";
+    var to_address = "$TO_ADDRESS";
+    var enc_event_privkey = "$ENC_EVENT_PRIVKEY";
+    var t3_sighash = "$T3-SIGHASH";
+    var t3_raw = "$T3-RAW";
+
+    console.log("contract_id: " + contract_id);
+    console.log("to_address: " + to_address);
+    console.log("enc_event_privkey: " + enc_event_privkey);
+    console.log("t3_sighash: " + t3_sighash);
+    console.log("t3_raw: " + t3_raw);
+
+    return;
+
+    console.log("check");
+
+    var wpriv = document.getElementById("wpriv");
+    var priv58check = wpriv.value;
+
+    // validate input
+    var ecArr;
+    try {
+        ecArr = Bitcoin.ECKey.decodeString(priv58check);
+    } catch (err) {
+        console.log(err);
+        fail("bad key: " + err);
+        return;
+    }
+
+    var ec = new Bitcoin.ECKey(ecArr);
+    ec.setCompressed(true);
+    var ecPubExp = ec.getExportedPublicKey();
+
+    console.log("EC pasted pub key (base58): " + ecPubExp);
+    console.log("EC giver pub key (base58): " + giver_ec_pubkey);
+    console.log("EC taker pub key (base58): " + taker_ec_pubkey);
+
+    // is it the giver or taker we are serving here?
+    var is_giver = ecPubExp == giver_ec_pubkey;
+    var is_taker = ecPubExp == taker_ec_pubkey;
+
+    // sign for giver
+    if(is_giver) {
+        var sigArr = ec.sign(t2_sighash_input_0);
+        var sigHex = Crypto.util.bytesToHex(sigArr);
+        console.log("signature (giver): " + sigHex);
+    }
+
+    // sign for taker
+    else if(is_taker) {
+        var sigArr = ec.sign(t2_sighash_input_1);
+        var sigHex = Crypto.util.bytesToHex(sigArr);
+        console.log("signature (taker): " + sigHex);
+    }
+
+    else {
+        fail("wrong key");
+        return;
+    }
+
+    // Call to Mw
+    // ----------
+
+    var contract_id = "$CONTRACT_ID";
+    var url = "http://127.0.0.1:8081/submit-t2-signature/{" +
+              "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
+              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubExp) + "\"," +
+              "\"t2_signature\":\"" + encodeURIComponent(sigHex) + "\"}";
+
+    console.log("url: " + url);
+
+    var ECtag = document.getElementById("url");
+    if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
+
+    $.ajax({
+             url: url,
+             success: function(response,status,xhr) {
+                $( "#result" ).html(xhr.responseText)
+             }
+             });
+
+    // Print an ok to screen and JS console.
+    // -------------------------------------
+    console.log(ok = "ok.");
+    var oktag = document.getElementById("ok");
+    if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
+
+    console.log("ok");
+  }
+
+</script>
