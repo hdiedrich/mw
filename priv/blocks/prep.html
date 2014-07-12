@@ -1,7 +1,7 @@
 <div class=main>
 
 
-  <!-- LIBS -->                                                          
+  <!-- LIBS -->
 
   <!-- BitcoinJS -->
 
@@ -27,26 +27,26 @@
 
   <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
 
-  <!-- RSA -->                                                          
+  <!-- RSA -->
 
-  <!-- for pkcs5pkey -->                                                          
+  <!-- for pkcs5pkey -->
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
-  <!-- for crypto -->                                                             
+  <!-- for crypto -->
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
   <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
-  <!-- for crypto, asn1, asn1x509 -->                                             
-  <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script> 
-  <!-- for asn1x509(stohex) -->                                                   
+  <!-- for crypto, asn1, asn1x509 -->
+  <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script>
+  <!-- for asn1x509(stohex) -->
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/base64x-1.1.min.js"></script>
 
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/prng4.js"></script>
-  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script> 
-  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script> 
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa2.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/base64.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1hex-1.1.js"></script>
@@ -57,19 +57,19 @@
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1-1.0.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/asn1x509-1.0.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/crypto-1.1.js"></script>
-                                                                                  
-  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec.js"></script>  
+
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/ec-patch.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ecdsa-modified-1.0.js"></script>
 
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/keyutil-1.0.js"></script>
 
-  <!-- jQuery -->                                                          
+  <!-- jQuery -->
 
   <script type="text/javascript" src="/jquery/jquery-1.11.1.min.js"></script>
 
 
-  <!-- TEXT -->                                                          
+  <!-- TEXT -->
 
   <h3>Prepartion</h3>
 
@@ -81,27 +81,27 @@
         <br />
         <br />
       </li>
-      
+
       <li>
         <b>Please copy and keep handy:</b>
         <br />
         <br />
-        <ul>    
+        <ul>
           <li><b>1. Your Bet Address:</b>
             <br />
             <p id=ECpub style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
-          </li>  
+          </li>
           <li><b>2. Its Private Key:</b>
             <br />
             <p id=ECpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-          </li>  
+          </li>
           <li><b>3. Your Oracle Security Key:</b>
             <br />
             <p id=pem style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-          </li>  
-        </ul>    
+          </li>
+        </ul>
       </li>
-    </ul>    
+    </ul>
   </p>
 
   <hr />
@@ -112,15 +112,15 @@
       <li><b>FYI, you EC pubkey is:</b>
         <br />
           <p id=ecPub58 style="font-family: monospace; white-space: pre;"><font color=red>[An EC pubkey should appear here.]</font></p>
-      </li>  
+      </li>
       <li><b>FYI, you RSA pubkey is:</b>
         <br />
           <p id=rsa_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An RSA pubkey should appear here.]</font></p>
-      </li>  
+      </li>
       <li><b>Debug info: Mw call</b>
         <br />
           <p id=url style="font-family: monospace; white-space: pre;"><font color=red>[An GET call should appear here.]</font></p>
-      </li>  
+      </li>
     </ul>
   </p>
 
@@ -137,11 +137,11 @@
   <hr>
 
 
-  <!-- SCRIPTS -->                                                          
+  <!-- SCRIPTS -->
 
   <script>
-  
-    // init    
+
+    // init
     console.log(ok = "init");
 
 Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
@@ -153,7 +153,7 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
  };
 
     console.log(ok = "start");
-  
+
     // create eliptic key
     var ec = new Bitcoin.ECKey();
     ec.setCompressed(true);
@@ -182,22 +182,22 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
     var ECtag = document.getElementById("addr2");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
-    
+
     // Address
     // -------
     // for checks at http://brainwallet.org/#sign:
     // ec.setCompressed(false);
     var addr = ec.getBitcoinAddress();
     console.log("address: " + addr);
-    
+
     // Print address to screen
     var ECtag = document.getElementById("addr");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + addr + "</font>";
-    
+
     var rsa = new RSAKey();
-    rsa.generate(1024, '10001'); // generate 1024bit RSA private key with public exponent 'x010001'
-    var pem = KEYUTIL.getEncryptedPKCS5PEMFromRSAKey(rsa, "password");    
-    console.log("RSA key PEM: " + pem);    
+    rsa.generate(2048, '10001'); // generate 2048 bit RSA private key with public exponent 'x010001' == 65537
+    var pem = KEYUTIL.getPEM(rsa, "PKCS1PRV");
+    console.log("RSA key PEM: " + pem);
 
     // Print RSA PEM to screen
     var ECtag = document.getElementById("pem");
@@ -209,8 +209,8 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     var rsaPubPEM = KEYUTIL.getPEM(rsaPub);
     rsaPubPEMEnc = rsaPubPEM.replace(/\r/g, "\\r");
     rsaPubPEMEnc = rsaPubPEMEnc.replace(/\n/g, "\\n");
-    var rsaPubPEMEnc = encodeURIComponent(rsaPubPEMEnc); 
-  
+    var rsaPubPEMEnc = encodeURIComponent(rsaPubPEMEnc);
+
     var ECtag = document.getElementById("ecPub58");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
 
@@ -228,10 +228,10 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
 
     var ECtag = document.getElementById("url");
     if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
-    
+
     $.ajax({
              url: url,
-             success: function(response,status,xhr) { 
+             success: function(response,status,xhr) {
                 $( "#result2" ).html(xhr.responseText)
              }
              });
