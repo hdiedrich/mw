@@ -137,8 +137,11 @@ response(Req, 'get-t3-for-signing'=State) ->
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
-                {ContractId0, _} = cowboy_req:qs_val(<<"contract_id">>, Req),
-                {ToAddress, _} = cowboy_req:qs_val(<<"to_address">>, Req),
+                %% {ContractId0, _} = cowboy_req:qs_val(<<"contract_id">>, Req),
+                %% {ToAddress, _} = cowboy_req:qs_val(<<"to_address">>, Req),
+                {JSON, _} = cowboy_req:binding('json', Req),
+                {[{<<"contract_id">>, ContractId0},
+                  {<<"to_address">>, ToAddress}]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
                 Response =
