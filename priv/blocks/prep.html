@@ -77,7 +77,7 @@
   <p>
     <ul>
       <li>
-        <b>Please send BTC 0.02 to <span id=addr2><font color=red>[An address should appear here.]</font></span></b>
+        <b>Please send BTC 0.02 to <span id=addr><font color=red>[An address should appear here.]</font></span></b>
         <br />
         <br />
       </li>
@@ -87,17 +87,25 @@
         <br />
         <br />
         <ul>
-          <li><b>1. Your Bet Address:</b>
+          <li><b>1. Bet Address (base58check) :</b>
             <br />
-            <p id=ECpub style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
+            <p id=betaddr style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
           </li>
-          <li><b>2. Its Private Key:</b>
+          <li><b>2. EC Public Key (compressed; base58check) :</b>
             <br />
-            <p id=ECpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+            <p id=ecpub style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
           </li>
-          <li><b>3. Your Oracle Security Key:</b>
+          <li><b>3. EC Private Key (compressed, base58check) :</b>
             <br />
-            <p id=pem style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+            <p id=ecpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+          </li>
+          <li><b>4. RSA Public Key (PEM) :</b>
+            <br />
+            <p id=rsapub style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+          </li>
+          <li><b>5. RSA Private Key (PEM) :</b>
+            <br />
+            <p id=rsapriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
           </li>
         </ul>
       </li>
@@ -105,19 +113,7 @@
   </p>
 
   <hr />
-
-  <h4>Notes</h4>
-  <p>
-    <ul>
-      <li><b>FYI, you EC pubkey is:</b>
-        <br />
-          <p id=ecPub58 style="font-family: monospace; white-space: pre;"><font color=red>[An EC pubkey should appear here.]</font></p>
-      </li>
-      <li><b>FYI, you RSA pubkey is:</b>
-        <br />
-          <p id=rsa_pubkey style="font-family: monospace; white-space: pre;"><font color=red>[An RSA pubkey should appear here.]</font></p>
-      </li>
-      <li><b>Debug info: Mw call</b>
+    <li><b>Debug info: Mw call</b>
         <br />
           <p id=url style="font-family: monospace; white-space: pre;"><font color=red>[An GET call should appear here.]</font></p>
       </li>
@@ -154,68 +150,73 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
 
     console.log(ok = "start");
 
-    // create eliptic key
+    // create EC key (private part)
     var ec = new Bitcoin.ECKey();
     ec.setCompressed(true);
-    var ecHex = ec.toString();
-    var ec58 = Bitcoin.Base58.encode(ec.priv.toByteArrayUnsigned());
-    var ecExp = ec.getExportedPrivateKey();
-    console.log("EC priv key (hex): " + ecHex);
-    console.log("EC priv key (base58): " + ec58);
-    console.log("EC priv key (exported): " + ecExp);
-
-    // Print priv key to screen
-    var ECtag = document.getElementById("ECpriv");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecExp + "</font>";
-
-    // Same with pub part, print it
-    var ecPub = new BigInteger(ec.getPub()); // fills this.pub
-    var ecPubHex = Crypto.util.bytesToHex(ec.getPub());
-    var ecPub58 = Bitcoin.Base58.encode(ecPub.toByteArrayUnsigned());
-    var ecPubExp = ec.getExportedPublicKey();
-    console.log("EC pub key (hex): " + ecPubHex);
-    console.log("EC pub key (base58): " + ecPub58);
-    console.log("EC pub key (exported): " + ecPubExp);
-
-    // Print pub key to screen
-    var ECtag = document.getElementById("ECpub");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
-    var ECtag = document.getElementById("addr2");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPubExp + "</font>";
+    var ecPrivHex      = ec.toString();
+    var ecPrivB58      = Bitcoin.Base58.encode(ec.priv.toByteArrayUnsigned());
+    var ecPrivB58Check = ec.getExportedPrivateKey();
 
     // Address
     // -------
     // for checks at http://brainwallet.org/#sign:
     // ec.setCompressed(false);
     var addr = ec.getBitcoinAddress();
-    console.log("address: " + addr);
 
-    // Print address to screen
-    var ECtag = document.getElementById("addr");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + addr + "</font>";
+    // EC public part is derived from private part:
+    var ecPub         = new BigInteger(ec.getPub()); // fills this.pub
+    var ecPubHex      = Crypto.util.bytesToHex(ec.getPub());
+    var ecPubB58      = Bitcoin.Base58.encode(ecPub.toByteArrayUnsigned());
+    var ecPubB58Check = ec.getExportedPublicKey();
 
-    var rsa = new RSAKey();
-    rsa.generate(2048, '10001'); // generate 2048 bit RSA private key with public exponent 'x010001' == 65537
-    var pem = KEYUTIL.getPEM(rsa, "PKCS1PRV");
-    console.log("RSA key PEM: " + pem);
-
-    // Print RSA PEM to screen
-    var ECtag = document.getElementById("pem");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + pem + "</font>";
+    // create RSA privkey PEM:
+    var rsaPriv = new RSAKey();
+    rsaPriv.generate(2048, '10001'); // generate 2048 bit RSA private key with public exponent 'x010001' == 65537
+    var rsaPrivPEM = KEYUTIL.getPEM(rsaPriv, "PKCS1PRV");
 
     // create RSA pubkey PEM
     var rsaPub = new RSAKey();
-    rsaPub.setPublic(rsa.n, rsa.e);
+    rsaPub.setPublic(rsaPriv.n, rsaPriv.e);
     var rsaPubPEM = KEYUTIL.getPEM(rsaPub);
     rsaPubPEMEnc = rsaPubPEM.replace(/\r/g, "\\r");
     rsaPubPEMEnc = rsaPubPEMEnc.replace(/\n/g, "\\n");
     var rsaPubPEMEnc = encodeURIComponent(rsaPubPEMEnc);
 
-    var ECtag = document.getElementById("ecPub58");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + ecPub58 + "</font>";
+    console.log("address: " + addr);
 
-    var ECtag = document.getElementById("rsa_pubkey");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + rsaPubPEMEnc + "</font>";
+    console.log("EC priv key (hex): " + ecPrivHex);
+    console.log("EC priv key (base58): " + ecPrivB58);
+    console.log("EC priv key (exported): " + ecPrivB58Check);
+
+    console.log("EC pub key (hex): " + ecPubHex);
+    console.log("EC pub key (base58): " + ecPubB58);
+    console.log("EC pub key (exported): " + ecPubB58Check);
+
+    console.log("RSA Private Key PEM: " + rsaPrivPEM);
+    console.log("RSA Public  Key PEM: " + rsaPubPEM);
+
+    // Print address to screen
+    var Tag = document.getElementById("betaddr");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + addr + "</font>";
+
+    var Tag = document.getElementById("addr");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + addr + "</font>";
+
+    // Print EC pub key to screen
+    var Tag = document.getElementById("ecpub");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + ecPubB58Check + "</font>";
+
+    // Print EC priv key to screen
+    var Tag = document.getElementById("ecpriv");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + ecPrivB58Check + "</font>";
+
+    // Print RSA Public PEM to screen
+    var Tag = document.getElementById("rsapub");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + rsaPubPEM + "</font>";
+
+    // Print RSA Private PEM to screen
+    var Tag = document.getElementById("rsapriv");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + rsaPrivPEM + "</font>";
 
     // Call to Mw
     // ----------
@@ -223,11 +224,11 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     var contract_id = "$CONTRACT_ID";
     var url = "http://127.0.0.1:8081/enter-contract/{" +
               "\"contract_id\":\"" + contract_id + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubExp) + "\"," +
+              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubB58Check) + "\"," +
               "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"}";
 
-    var ECtag = document.getElementById("url");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
+    var Tag = document.getElementById("url");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + url + "</font>";
 
     $.ajax({
              url: url,
