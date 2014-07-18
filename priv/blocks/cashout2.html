@@ -1,5 +1,3 @@
-NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
-
 <div class=main>
 
   <h3>Cashout</h3>
@@ -12,31 +10,52 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
     </ll>
   </p>
 
+    <li><b>1. To Address (receives winnings) (base58check) :</b>
+    <br />
+    <p style="font-family: monospace; white-space: pre;"> $TO_ADDRESS </p>
+    </li>
+
+    <li><b>2. Revealed Oracle RSA Private Key (PEM) :</b>
+    <br />
+    <p id=oracle_privkey style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
+    </li>
+
+    <li><b>3. Encrypted Event Private Key (Hex) :</b>
+    <br />
+    <p style="font-family: monospace; white-space: pre;"> $ENC_EVENT_PRIVKEY </p>
+    </li>
+
+    <li><b>4. T3 Raw (Hex) :</b>
+    <br />
+    <p style="font-family: monospace; white-space: pre;"> $T3-RAW </p>
+    </li>
+
+    <li><b>5. T3 Sighash (Hex) :</b>
+    <br />
+    <p style="font-family: monospace; white-space: pre;"> $T3-SIGHASH </p>
+    </li>
+
   <h4>Instructions</h4>
   <p>
     <ll>
       <li>
-        Please paste your SIGNATURE KEY that you copied earlier:
-        <textarea id=ec58check class=mark>...</textarea>
+        Please paste your EC PRIVATE KEY that you copied earlier:
+        <textarea id=signer_ec_privkey class=mark></textarea>
         <br />
       </li>
       <li>
-        Please paste the SECURITY KEY that you copied earlier:
-        <textarea id=rsaPEM class=mark>...</textarea>
+        Please paste your RSA PRIVATE KEY that you copied earlier:
+        <textarea id=signer_rsa_privkey class=mark></textarea>
         <br />
       </li>
+
       <li>
-        This is your double-encrypted WINNING KEY:
-        <textarea id=ev class=mark>...</textarea>
-        <br />
-      </li>
-      <li>
-        This is the revealed ORACLE KEY:
-        <textarea id=oracle class=mark>$ORACLE_PRIVKEY</textarea>
-        <br />
+        Then, please click 'sign'.
       </li>
     </ll>
   </p>
+
+  <button class=mark onClick="sign()">sign</button>
 
   <p>
     <a href=wrapup.html>cashout</a>
@@ -57,7 +76,7 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
                  .. using your personal, one time SECURITY KEY
               </li>
               <li>
-                 .. and the ORACLE KEY that was released upon the event's conclusion
+                 .. and the ORACLE KEY that was released at event outcome
               </li>
               <li>
                  the resulting is the decrypted WINNING KEY.
@@ -101,26 +120,12 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
           </li>
         </ul>
       <li>
-        Contract ID: $CONTRACT_ID
+        Ajax call: <p id=url></p>
       </li>
       <li>
-        TO address: $TO_ADDRESS
+        Ajax result: <p id=result></p>
       </li>
-      <li>
-        Oracle Privkey: $ORACLE_PRIVKEY
-      </li>
-      <li>
-        Enc Event Privkey: $ENC_EVENT_PRIVKEY
-      </li>
-      <li>
-        T3 Sig Hash: $T3-SIGHASH
-      </li>
-      <li>
-        T3 Hash: $T3-HASH
-      </li>
-      <li>
-        T3 Raw: $T3-RAW
-      </li>
+
     </ul>
   </p>
 
@@ -153,25 +158,28 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
 
   <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
 
-  <!-- RSA -->
+    <!-- Crypto-JS -->
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/cipher-core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/evpkdf.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/mode-cfb.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/enc-base64.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha1.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/format-hex.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/pad-nopadding.js"></script>
 
-  <!-- for pkcs5pkey -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
-  <!-- for crypto -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
   <!-- for crypto, asn1, asn1x509 -->
+
   <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script>
-  <!-- for asn1x509(stohex) -->
+
+  <!-- jsrsasign -->
+
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/base64x-1.1.min.js"></script>
 
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/prng4.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rng.js"></script>
+  <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/sha1.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/rsa2.js"></script>
   <script language="JavaScript" type="text/javascript" src="../jsrsasign/ext/base64.js"></script>
@@ -196,103 +204,135 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
 
 <script>
 
-  Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
+var oraclePrivkey0 = "$ORACLE_PRIVKEY"
+var oraclePrivkey = atob(oraclePrivkey0);
+
+var Tag = document.getElementById("oracle_privkey");
+if(Tag) Tag.innerHTML = oraclePrivkey;
+
+
+Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     var hash = this.getPub();
     while (hash.length < 32) hash.unshift(0);
     var checksum = Crypto.SHA256(Crypto.SHA256(hash, {asBytes: true}), {asBytes: true});
     var bytes = hash.concat(checksum.slice(0,4));
     return Bitcoin.Base58.encode(bytes);
-  };
+};
 
-  function fail(text) {
+function fail(text) {
     var ws = document.getElementById("status");
     if(ws) ws.innerHTML = "<font color=red>" + text + "</font>";
-  }
+}
 
-  function sign() {
+function sign() {
+    var contractId = "$CONTRACT_ID";
+    var toAddress = "$TO_ADDRESS";
+    var oraclePrivkey0 = "$ORACLE_PRIVKEY"
+    var oraclePrivkey = atob(oraclePrivkey0);;
+    var encEventPrivkey = "$ENC_EVENT_PRIVKEY";
+    var t3Sighash = "$T3-SIGHASH";
+    var t3Raw = "$T3-RAW";
 
-    console.log("sign():");
+    var signerECPrivkey0 = document.getElementById("signer_ec_privkey");
+    var signerECPrivkeyB58Check = signerECPrivkey0.value;
 
-    var contract_id = "$CONTRACT_ID";
-    var to_address = "$TO_ADDRESS";
-    var enc_event_privkey = "$ENC_EVENT_PRIVKEY";
-    var t3_sighash = "$T3-SIGHASH";
-    var t3_raw = "$T3-RAW";
+    var signerRSAPrivkey0 = document.getElementById("signer_rsa_privkey");
+    // Fucking PEM and pasting. hurrrrr
+    var firstSplits  = signerRSAPrivkey0.value.split("-----BEGIN RSA PRIVATE KEY-----");
+    var secondSplits = firstSplits[1].split("-----END RSA PRIVATE KEY-----");
 
-    console.log("contract_id: " + contract_id);
-    console.log("to_address: " + to_address);
-    console.log("enc_event_privkey: " + enc_event_privkey);
-    console.log("t3_sighash: " + t3_sighash);
-    console.log("t3_raw: " + t3_raw);
+    var signerRSAPrivkey =
+        "-----BEGIN RSA PRIVATE KEY-----" +
+        secondSplits[0].split(" ").join("\n") +
+        "-----END RSA PRIVATE KEY-----";
 
-    return;
+    var rsaOraclePrivkey = new RSAKey();
+    var rsaSignerPrivkey = new RSAKey();
+    rsaOraclePrivkey = KEYUTIL.getKey(oraclePrivkey,    "PKCS1PRV");
+    rsaSignerPrivkey = KEYUTIL.getKey(signerRSAPrivkey, "PKCS1PRV");
 
-    console.log("check");
+    // <<_Prefix:8/binary, EncAESKey:256/binary, CipherText1/binary>>
+    console.log("encEventPrivkey: " + encEventPrivkey);
+    var encAESKey = encEventPrivkey.substring(16, 528);
+    var cipherText1 = encEventPrivkey.substring(528);
 
-    var wpriv = document.getElementById("wpriv");
-    var priv58check = wpriv.value;
+    var AESKey = rsaSignerPrivkey.decryptOAEP(encAESKey);
+
+    var AESConfig = { iv: CryptoJS.enc.Hex.parse('00000000000000000000000000000000') };
+
+    // hurrdurr engage encodings / types madness
+    var cipherText1WordArray = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(cipherText1));
+    var AESKeyWordArray      = CryptoJS.enc.Base64.parse(btoa(AESKey));
+
+    var plaintext1Object = CryptoJS.AES.decrypt(cipherText1WordArray, AESKeyWordArray, AESConfig);
+    plaintext1 = plaintext1Object.toString(CryptoJS.enc.Hex);
+    console.log("plaintext1: " + plaintext1);
+
+    // Yo Dawg, we heard you like encryption.
+    var encAESKey2 = plaintext1.substring(16, 528);
+    var cipherText2 = plaintext1.substring(528);
+
+    var AESKey2 = rsaOraclePrivkey.decryptOAEP(encAESKey2);
+
+    var cipherText2WordArray = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(cipherText2));
+    var AESKeyWordArray2 = CryptoJS.enc.Base64.parse(btoa(AESKey2));
+
+    var plaintext2Object = CryptoJS.AES.decrypt(cipherText2WordArray, AESKeyWordArray2, AESConfig);
+    var eventECPrivkeyB58Check = atob(plaintext2Object.toString(CryptoJS.enc.Base64));
+
+    console.log("eventECPrivkeyB58Check: " + eventECPrivkeyB58Check);
+    console.log("signerECPrivkeyB58Check: " + signerECPrivkeyB58Check);
 
     // validate input
-    var ecArr;
+    
+    var eventECKey0;
     try {
-        ecArr = Bitcoin.ECKey.decodeString(priv58check);
+        eventECKey0 = Bitcoin.ECKey.decodeString(eventECPrivkeyB58Check);
+    } catch (err) {
+        console.log(err);
+        fail("bad key: " + err);
+        return;
+    }
+    var signerECKey0;
+    try {
+        signerECKey0 = Bitcoin.ECKey.decodeString(signerECPrivkeyB58Check);
     } catch (err) {
         console.log(err);
         fail("bad key: " + err);
         return;
     }
 
-    var ec = new Bitcoin.ECKey(ecArr);
-    ec.setCompressed(true);
-    var ecPubExp = ec.getExportedPublicKey();
+    var eventECKey  = new Bitcoin.ECKey(eventECKey0);
+    var signerECKey = new Bitcoin.ECKey(signerECKey0);
 
-    console.log("EC pasted pub key (base58): " + ecPubExp);
-    console.log("EC giver pub key (base58): " + giver_ec_pubkey);
-    console.log("EC taker pub key (base58): " + taker_ec_pubkey);
+    // Unlike signing of T2, here the same sighash is signed twice:
+    // signed with winner's EC privkey
+    var signature1Bytes = signerECKey.sign(t3Sighash);
+    var signature1 = Crypto.util.bytesToHex(signature1Bytes);
 
-    // is it the giver or taker we are serving here?
-    var is_giver = ecPubExp == giver_ec_pubkey;
-    var is_taker = ecPubExp == taker_ec_pubkey;
-
-    // sign for giver
-    if(is_giver) {
-        var sigArr = ec.sign(t2_sighash_input_0);
-        var sigHex = Crypto.util.bytesToHex(sigArr);
-        console.log("signature (giver): " + sigHex);
-    }
-
-    // sign for taker
-    else if(is_taker) {
-        var sigArr = ec.sign(t2_sighash_input_1);
-        var sigHex = Crypto.util.bytesToHex(sigArr);
-        console.log("signature (taker): " + sigHex);
-    }
-
-    else {
-        fail("wrong key");
-        return;
-    }
+    // signed with decrypted event EC privkey
+    var signature2Bytes = eventECKey.sign(t3Sighash);
+    var signature2 = Crypto.util.bytesToHex(signature2Bytes);
 
     // Call to Mw
     // ----------
-
-    var contract_id = "$CONTRACT_ID";
-    var url = "http://127.0.0.1:8081/submit-t2-signature/{" +
-              "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubExp) + "\"," +
-              "\"t2_signature\":\"" + encodeURIComponent(sigHex) + "\"}";
+    var url = "http://127.0.0.1:8081/submit-t3-signatures/{" +
+        "\"contract_id\":\"" + encodeURIComponent(contractId) + "\"," +
+        "\"t3_raw\":\"" + encodeURIComponent(t3Raw) + "\"," +
+        "\"t3_signature1\":\"" + encodeURIComponent(signature1) + "\"," +
+        "\"t3_signature2\":\"" + encodeURIComponent(signature2) + "\"}";
 
     console.log("url: " + url);
 
-    var ECtag = document.getElementById("url");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
+    var Tag = document.getElementById("url");
+    if(Tag) Tag.innerHTML = "<font color=blue>" + url + "</font>";
 
     $.ajax({
-             url: url,
-             success: function(response,status,xhr) {
-                $( "#result" ).html(xhr.responseText)
-             }
-             });
+        url: url,
+        success: function(response,status,xhr) {
+            $( "#result" ).html(xhr.responseText)
+        }
+    });
 
     // Print an ok to screen and JS console.
     // -------------------------------------
@@ -301,6 +341,6 @@ NOTE - DUE TO STUPIDITY ON MY PART, T3 AS FAR AS WE HAD IT WAS LOST
     if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
 
     console.log("ok");
-  }
+}
 
 </script>

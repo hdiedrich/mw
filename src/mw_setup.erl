@@ -17,7 +17,7 @@ insert_world_cup_events() ->
     Results = results(teams("setup/teams.csv"),
                       matches("setup/matches.csv")),
     %% Quick hack to scale up concurrency a bit as CPU for key gen is bottleneck
-    {FirstResults, _} = lists:split(length(Results) div 1000, Results),
+    {FirstResults, _} = lists:split(length(Results) div 500, Results),
     Total = length(FirstResults),
     {Part1, Rest1} = lists:split(Total div 6, FirstResults),
     {Part2, Rest2} = lists:split(Total div 6, Rest1),
@@ -92,17 +92,26 @@ gen_ec_keypair() ->
                                  "temp_setup_ec_pubkey" ++ ?SUFFIX),
 
     GenBytes = "openssl rand 32 > " ++ ECTempBytes,
+
+    %% https://en.bitcoin.it/wiki/Private_key#Base_58_Wallet_Import_format
+    %% The privkey eventually gets parsed by client-side, so we want it in
+    %% standard WIF so it works with e.g. bitcoinjs lib.
+    %% TODO: change network back to bitcoin-testnet? needed mainent to work with
+    %% bitcoinjs Bitcoin.ECKey.decodeString in the browser
     GenECPriv = BitcoinTool ++ " "
-        "--network bitcoin-testnet "
+        "--network bitcoin "
         "--input-type private-key "
         "--input-format raw "
         "--input-file " ++ ECTempBytes ++ " "
-        "--output-type private-key "
+        "--output-type private-key-wif "
         "--output-format base58check "
-        "--public-key-compression compressed > " ++ ECPrivAbsPath,
+        "--public-key-compression uncompressed > " ++ ECPrivAbsPath,
 
+    %% Pubkey is only used in T2 output script, so we use a format that can
+    %% directly be used by Bj to put it into the script binary.
+    %% TODO: verify! is the above true? should we change some parameter?
     GenECPub = BitcoinTool ++ " "
-        "--network bitcoin-testnet "
+        "--network bitcoin "
         "--input-type private-key "
         "--input-format raw "
         "--input-file " ++ ECTempBytes ++ " "

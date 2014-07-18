@@ -158,6 +158,7 @@ response(Req, 'submit-t3-signatures'=State) ->
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
                 {JSON, _} = cowboy_req:binding('json', Req),
+                ?info("HURR JSON: ~p", [JSON]),
                 {[{<<"contract_id">>, ContractId0},
                   {<<"t3_raw">>, T3Raw},
                   {<<"t3_signature1">>, T3Signature1},
