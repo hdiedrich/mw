@@ -17,7 +17,7 @@ insert_world_cup_events() ->
     Results = results(teams("setup/teams.csv"),
                       matches("setup/matches.csv")),
     %% Quick hack to scale up concurrency a bit as CPU for key gen is bottleneck
-    {FirstResults, _} = lists:split(length(Results) div 1000, Results),
+    {FirstResults, _} = lists:split(length(Results) div 500, Results),
     Total = length(FirstResults),
     {Part1, Rest1} = lists:split(Total div 6, FirstResults),
     {Part2, Rest2} = lists:split(Total div 6, Rest1),

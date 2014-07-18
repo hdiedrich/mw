@@ -50,8 +50,8 @@ PostgreSQL bootstrap
 As a user with rights to modify the database (this could be postgres user):
 
 ``` bash
-psql mw_alpha < priv/postgres/mw_db_drop_all
-psql mw_alpha < priv/postgres/mw_db_init
+psql mw < priv/postgres/mw_db_drop_all
+psql mw < priv/postgres/mw_db_init
 ```
 
 Build & Run the Stack

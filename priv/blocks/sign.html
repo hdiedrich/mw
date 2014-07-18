@@ -18,7 +18,7 @@
     until the bet is resolved.
   </p>
 
-  <textarea id=wpriv class=mark></textarea>
+  <textarea id=signer_priv_key class=mark></textarea>
 
   <button class=mark onClick="sign()">sign</button>
 
@@ -167,51 +167,51 @@
 
     console.log("sign");
 
-    var t2_raw = "$T2_RAW";
-    var t2_sighash_input_0 = "$T2_SIGHASH_INPUT_0";
-    var t2_sighash_input_1 = "$T2_SIGHASH_INPUT_1";
-    var giver_ec_pubkey = "$GIVER_EC_PUBKEY";
-    var taker_ec_pubkey = "$TAKER_EC_PUBKEY";
+    var t2Raw = "$T2_RAW";
+    var t2SighashInput0 = "$T2_SIGHASH_INPUT_0";
+    var t2SighashInput1 = "$T2_SIGHASH_INPUT_1";
+    var giverECPubkeyB58Check = "$GIVER_EC_PUBKEY";
+    var takerECPubkeyB58Check = "$TAKER_EC_PUBKEY";
 
     console.log("check");
 
-    var wpriv = document.getElementById("wpriv");
-    var priv58check = wpriv.value;
+    var signerPrivKey0 = document.getElementById("signer_priv_key");
+    var signerPrivkeyB58Check = signerPrivKey0.value;
 
     // validate input
-    var ecArr;
+    var signerECKey0;
     try {
-        ecArr = Bitcoin.ECKey.decodeString(priv58check);
+        signerECKey0 = Bitcoin.ECKey.decodeString(signerPrivkeyB58Check);
     } catch (err) {
         console.log(err);
         fail("bad key: " + err);
         return;
     }
 
-    var ec = new Bitcoin.ECKey(ecArr);
-    ec.setCompressed(true);
-    var ecPubExp = ec.getExportedPublicKey();
+    var signerECKey = new Bitcoin.ECKey(signerECKey0);
+    signerECKey.setCompressed(true);
+    var signerECPubkeyB58Check = signerECKey.getExportedPublicKey();
 
-    console.log("EC pasted pub key (base58): " + ecPubExp);
-    console.log("EC giver pub key (base58): " + giver_ec_pubkey);
-    console.log("EC taker pub key (base58): " + taker_ec_pubkey);
+    console.log("EC pasted pub key (base58): " + signerECPubkeyB58Check);
+    console.log("EC giver pub key (base58): " + giverECPubkeyB58Check);
+    console.log("EC taker pub key (base58): " + takerECPubkeyB58Check);
 
     // is it the giver or taker we are serving here?
-    var is_giver = ecPubExp == giver_ec_pubkey;
-    var is_taker = ecPubExp == taker_ec_pubkey;
+    var isGiver = signerECPubkeyB58Check == giverECPubkeyB58Check;
+    var isTaker = signerECPubkeyB58Check == takerECPubkeyB58Check;
 
     // sign for giver
-    if(is_giver) {
-        var sigArr = ec.sign(t2_sighash_input_0);
-        var sigHex = Crypto.util.bytesToHex(sigArr);
-        console.log("signature (giver): " + sigHex);
+    if(isGiver) {
+        var signature = signerECKey.sign(t2SighashInput0);
+        var signatureHex = Crypto.util.bytesToHex(signature);
+        console.log("signature (giver): " + signatureHex);
     }
 
     // sign for taker
-    else if(is_taker) {
-        var sigArr = ec.sign(t2_sighash_input_1);
-        var sigHex = Crypto.util.bytesToHex(sigArr);
-        console.log("signature (taker): " + sigHex);
+    else if(isTaker) {
+        var signature = signerECKey.sign(t2SighashInput1);
+        var signatureHex = Crypto.util.bytesToHex(signature);
+        console.log("signature (taker): " + signatureHex);
     }
 
     else {
@@ -225,13 +225,13 @@
     var contract_id = "$CONTRACT_ID";
     var url = "http://127.0.0.1:8081/submit-t2-signature/{" +
               "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubExp) + "\"," +
-              "\"t2_signature\":\"" + encodeURIComponent(sigHex) + "\"}";
+              "\"ec_pubkey\":\"" + encodeURIComponent(signerECPubkeyB58Check) + "\"," +
+              "\"t2_signature\":\"" + encodeURIComponent(signatureHex) + "\"}";
 
     console.log("url: " + url);
 
-    var ECtag = document.getElementById("url");
-    if(ECtag) ECtag.innerHTML = "<font color=blue>" + url + "</font>";
+    var tag = document.getElementById("url");
+    if(tag) tag.innerHTML = "<font color=blue>" + url + "</font>";
 
     $.ajax({
              url: url,

@@ -365,7 +365,7 @@ do_get_t3_for_signing(ContractId, ToAddress) ->
             {ok, OPK} = mw_pg:select_oracle_privkey(ContractId, YesOrNo),
             EncEventKey = mw_lib:bin_to_hex(GetInfo(EventKeyName)),
             [
-             {"oracle_privkey", OPK},
+             {"oracle_privkey", base64:encode(OPK)}, %% Avoids line breaks in JS
              {"enc_event_privkey", EncEventKey},
              {"t3-sighash", T3Sighash},
              {"t3-hash", T3Hash},
@@ -383,7 +383,7 @@ do_submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
     NewT3Raw      = proplists:get_value("new-t3-raw", ReqRes),
     T3Broadcasted = proplists:get_value("t3-broadcasted", ReqRes),
     case T3Broadcasted of
-        "true" -> awesome;
+        "true" -> continue;
         _      -> ?API_ERROR(?T3_NOT_BROADCASTED)
     end,
     ok = mw_pg:insert_contract_event(ContractId, ?STATE_DESC_SIGNED_T3),
@@ -571,7 +571,11 @@ hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
     PaddedPlaintext = <<Plaintext/binary, Padding/binary>>,
     Ciphertext = crypto:block_encrypt(aes_cbc128, AESKey,
                                       ?DEFAULT_AES_IV, PaddedPlaintext),
-    EncAESKey = public_key:encrypt_public(AESKey, RSAPubKey),
+    %% Use OAEP as it's supported by Tom Wu's rsa2.js (RSADecryptOAEP)
+    %% http://en.wikipedia.org/wiki/Optimal_Asymmetric_Encryption_Padding
+    {_RecordName, Modulus, Exponent} = RSAPubKey,
+    EncAESKey = crypto:public_encrypt(rsa, AESKey, [Exponent, Modulus],
+                                      rsa_pkcs1_oaep_padding),
     %% Distinguishable prefix to identify the binary in case it's on the loose
     <<(mw_lib:hex_to_bin(?BINARY_PREFIX))/binary,
       EncAESKey/binary,
@@ -622,7 +626,7 @@ manual_test_2() ->
     {ok, _} = create_contract(1),
     ok.
 
-decryption_test(UserECPrivKey, UserRSAPrivKeyPEM,
+decryption_test(_UserECPrivKey, UserRSAPrivKeyPEM,
                 OraclePrivKeyHex, EncEventKey) ->
     {ok, UserRSAPrivKey} = pem_decode_bin(UserRSAPrivKeyPEM),
     {ok, OraclePrivKey} = pem_decode_bin(mw_lib:hex_to_bin(OraclePrivKeyHex)),
