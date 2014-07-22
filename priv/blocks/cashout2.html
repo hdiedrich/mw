@@ -262,22 +262,40 @@ function sign() {
 
     console.log("AESKey: " + AESKey);
 
-    // hngghff
-    var cipherText1WordArray = { ciphertext: cipherText1 }; // CryptoJS.enc.Hex.parse(cipherText1);
+    var key2 = "42424242424242424242424242424242";
+    var pt2  = "BBBBBBBBBBBBBBB";
+    var ctx  = "BD1E000E66307B122E06145D4AAAC0A9";
 
-    var AESKeyWordArray = CryptoJS.enc.Base64.parse(btoa(AESKey));
+    // hngghff
+    var cipherText1WordArray = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(cipherText1));
+    //var cipherText1WordArray = { ciphertext: CryptoJS.enc.Hex.parse(ct2) };
+    // console.log("cipherText1WordArray: " + cipherText1WordArray);
+
+    var AESKeyWordArray = CryptoJS.enc.Base64.parse(btoa(AESKey)); //{ key: AESKey };
+    //CryptoJS.enc.Hex.parse(AESKey);
+
+    console.log("AESKeyWordArray: " + AESKeyWordArray);
 
     var AESConfig =
         {
-            iv: CryptoJS.enc.Hex.parse("00000000000000000000000000000000")
+            iv: CryptoJS.enc.Hex.parse('00000000000000000000000000000000'),
             // formatter: CryptoJS.format.Hex
             // mode: CryptoJS.mode.CBC,
             // padding: CryptoJS.pad.NoPadding
         };
 
-    var plaintext1 = CryptoJS.AES.decrypt(cipherText1WordArray, AESKeyWordArray, AESConfig);
+    //var plaintext1 = CryptoJS.AES.decrypt(cipherText1WordArray, AESKeyWordArray, AESConfig);
+    // var encrypted  = CryptoJS.AES.encrypt(pt2, AESKeyWordArray, AESConfig);
+    // var plaintext0 = CryptoJS.AES.decrypt(encrypted, AESKeyWordArray, AESConfig);
+    //var plaintextx = CryptoJS.AES.decrypt(CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(ctx)),
+  //                                        AESKeyWordArray, AESConfig);
+    var plaintextz = CryptoJS.AES.decrypt(cipherText1WordArray, AESKeyWordArray, AESConfig);
+    //var plaintext1 = CryptoJS.AES.decrypt(cipherText1WordArray, AESKeyWordArray, AESConfig);
 
-    console.log("plaintext1: " + plaintext1.toString(CryptoJS.enc.Hex));
+//    console.log("encrypted: " + encrypted);
+  //  console.log("plaintext0: " + plaintext0);
+    console.log("plaintextx: " + plaintextz);
+    //console.log("plaintext1: " + plaintext1);
 
     var eventECPrivkey;
 

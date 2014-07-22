@@ -148,3 +148,20 @@ prop_hex() ->
     ?FORALL(Bin,
             binary(),
             Bin =:= mw_lib:hex_to_bin(mw_lib:bin_to_hex(Bin))).
+
+aes_enc(Key, Plaintext) when byte_size(Key) == 16 ->
+    PaddingLen = 16 - (byte_size(Plaintext) rem 16),
+    Padding = binary:copy(<<PaddingLen>>, PaddingLen),
+    PaddedPlaintext = <<Plaintext/binary, Padding/binary>>,
+
+    Ciphertext = crypto:block_encrypt(aes_cbc128,
+                                      Key,
+                                      <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>,
+                                      PaddedPlaintext),
+    {ok, Ciphertext}.
+
+aes_dec(Key, Ciphertext) when byte_size(Key) == 16 ->
+    crypto:block_decrypt(aes_cbc128,
+                         Key,
+                         <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>,
+                         Ciphertext).
