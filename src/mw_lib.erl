@@ -42,7 +42,7 @@ dec_b58check(B58) when is_binary(B58) ->
     <<Payload:PayloadLen/bytes, Hash:4/bytes>> = Bin,
     <<ExpectedHash:4/bytes, _/binary>> =
         double_sha256(<<Zeroes/binary, Payload/binary>>),
-    true = (ExpectedHash =:= Hash),
+    [throw(base58_checksum_validation_failed) || not (ExpectedHash =:= Hash)],
     <<Zeroes/binary, Payload/binary>>.
 
 %% We assume application/version byte was already concatenated with payload
@@ -148,3 +148,20 @@ prop_hex() ->
     ?FORALL(Bin,
             binary(),
             Bin =:= mw_lib:hex_to_bin(mw_lib:bin_to_hex(Bin))).
+
+aes_enc(Key, Plaintext) when byte_size(Key) == 16 ->
+    PaddingLen = 16 - (byte_size(Plaintext) rem 16),
+    Padding = binary:copy(<<PaddingLen>>, PaddingLen),
+    PaddedPlaintext = <<Plaintext/binary, Padding/binary>>,
+
+    Ciphertext = crypto:block_encrypt(aes_cbc128,
+                                      Key,
+                                      <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>,
+                                      PaddedPlaintext),
+    {ok, Ciphertext}.
+
+aes_dec(Key, Ciphertext) when byte_size(Key) == 16 ->
+    crypto:block_decrypt(aes_cbc128,
+                         Key,
+                         <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>,
+                         Ciphertext).
