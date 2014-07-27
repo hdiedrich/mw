@@ -122,6 +122,24 @@ bj_http_req(URL, _BodyArgs, Timeout) ->
 
 ensure_list(B) when is_binary(B) -> binary:bin_to_list(B);
 ensure_list(L) when is_list(L) -> L.
+
+set_resp_headers(Headers, Req) ->
+    SetHeader = fun({H,V}, ReqAcc) ->
+                        cowboy_req:set_resp_header(H, V, ReqAcc)
+                end,
+    lists:foldl(SetHeader, Req, Headers).
+
+cowboy_req_enable_cors(Req) ->
+    Req2 = set_resp_headers([
+                             %% TODO: what headers do we need to enable CORS?
+                             {<<"Access-Control-Allow-Origin">>,
+                              <<"http://127.0.0.1">>
+                                  %%<<"*">>
+                             },
+                             {<<"Access-Control-Allow-Methods">>, <<"GET,POST,OPTIONS">>}
+                            ],
+                            Req),
+    Req2.
 %%%===========================================================================
 %%% Internal functions
 %%%===========================================================================

@@ -10,53 +10,23 @@
     </ll>
   </p>
 
-    <li><b>1. To Address (receives winnings) (base58check) :</b>
-    <br />
-    <p style="font-family: monospace; white-space: pre;"> $TO_ADDRESS </p>
-    </li>
-
-    <li><b>2. Revealed Oracle RSA Private Key (PEM) :</b>
-    <br />
-    <p id=oracle_privkey style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-    </li>
-
-    <li><b>3. Encrypted Event Private Key (Hex) :</b>
-    <br />
-    <p style="font-family: monospace; white-space: pre;"> $ENC_EVENT_PRIVKEY </p>
-    </li>
-
-    <li><b>4. T3 Raw (Hex) :</b>
-    <br />
-    <p style="font-family: monospace; white-space: pre;"> $T3-RAW </p>
-    </li>
-
-    <li><b>5. T3 Sighash (Hex) :</b>
-    <br />
-    <p style="font-family: monospace; white-space: pre;"> $T3-SIGHASH </p>
-    </li>
-
   <h4>Instructions</h4>
   <p>
     <ll>
       <li>
-        Please paste your EC PRIVATE KEY that you copied earlier:
-        <textarea id=signer_ec_privkey class=mark></textarea>
+        Please enter your passphrase and click 'sign'.:
+        <textarea id=signer_passphrase class=mark></textarea>
         <br />
-      </li>
-      <li>
-        Please paste your RSA PRIVATE KEY that you copied earlier:
-        <textarea id=signer_rsa_privkey class=mark></textarea>
-        <br />
-      </li>
-
-      <li>
-        Then, please click 'sign'.
       </li>
     </ll>
   </p>
 
   <button class=mark onClick="sign()">sign</button>
 
+    <li><b>1. To Address (receives winnings) (base58check) :</b>
+    <br />
+    <p style="font-family: monospace; white-space: pre;"> $TO_ADDRESS </p>
+    </li>
   <p>
     <a href=wrapup.html>cashout</a>
   </p>
@@ -219,6 +189,15 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     return Bitcoin.Base58.encode(bytes);
 };
 
+// http://stackoverflow.com/questions/3745666/how-to-convert-from-hex-to-ascii-in-javascript
+function hex2a(hexx) {
+    var hex = hexx.toString();//force conversion
+    var str = '';
+    for (var i = 0; i < hex.length; i += 2)
+        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    return str;
+}
+
 function fail(text) {
     var ws = document.getElementById("status");
     if(ws) ws.innerHTML = "<font color=red>" + text + "</font>";
@@ -233,18 +212,22 @@ function sign() {
     var t3Sighash = "$T3-SIGHASH";
     var t3Raw = "$T3-RAW";
 
-    var signerECPrivkey0 = document.getElementById("signer_ec_privkey");
-    var signerECPrivkeyB58Check = signerECPrivkey0.value;
+    // TODO: here we hardcode the taker signing. Figure out how to determine if
+    // we have giver or taker BEFORE we can match on the decrypted EC key
+    var signerEncECPrivkey  = "$TAKER_ENC_EC_PRIVKEY";
+    var signerEncRSAPrivkey = "$TAKER_ENC_RSA_PRIVKEY";
 
-    var signerRSAPrivkey0 = document.getElementById("signer_rsa_privkey");
-    // Fucking PEM and pasting. hurrrrr
-    var firstSplits  = signerRSAPrivkey0.value.split("-----BEGIN RSA PRIVATE KEY-----");
-    var secondSplits = firstSplits[1].split("-----END RSA PRIVATE KEY-----");
+    var signerPassphrase0 = document.getElementById("signer_passphrase");
+    var signerPassphrase = signerPassphrase0.value;
 
-    var signerRSAPrivkey =
-        "-----BEGIN RSA PRIVATE KEY-----" +
-        secondSplits[0].split(" ").join("\n") +
-        "-----END RSA PRIVATE KEY-----";
+    var signerPrivkeyHex = CryptoJS.AES.decrypt(signerEncECPrivkey, signerPassphrase);
+    var signerECPrivkeyB58Check = hex2a(signerPrivkeyHex);
+
+    var signerRSAPrivkeyHex = CryptoJS.AES.decrypt(signerEncRSAPrivkey, signerPassphrase)
+    var signerRSAPrivkey = hex2a(signerRSAPrivkeyHex);
+
+    console.log("signerECPrivkeyB58Check: " + signerECPrivkeyB58Check);
+    console.log("signerRSAPrivkey: " + signerRSAPrivkey);
 
     var rsaOraclePrivkey = new RSAKey();
     var rsaSignerPrivkey = new RSAKey();
@@ -284,7 +267,7 @@ function sign() {
     console.log("signerECPrivkeyB58Check: " + signerECPrivkeyB58Check);
 
     // validate input
-    
+
     var eventECKey0;
     try {
         eventECKey0 = Bitcoin.ECKey.decodeString(eventECPrivkeyB58Check);

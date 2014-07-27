@@ -55,7 +55,12 @@ insert_wc_bet({_N, Headline, Detail}) ->
                                      "test_keys/giver_keys1/rsa_pubkey.pem")),
     mw_contract:enter_contract(ContractId,
                                ECPubKey,
-                               RSAPubKey),
+                               RSAPubKey,
+                               %% As these are test givers for dev, we fake
+                               %% the enc privkeys (they are never used)
+                               <<"">>, 
+                               <<"">>
+                              ),
     Total = erlang:get(mw_event_count),
     ?info("~p Inserted oracle_keys & event ~p (~s %)",
           [self(), OracleKeysId,

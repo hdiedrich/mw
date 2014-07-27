@@ -74,7 +74,6 @@ response(Req, 'bet-list'=State) ->
     {JSON, Req, State};
 
 response(Req, 'enter-contract'=State) ->
-    io:format("Respone ...", []),
     HandleFun =
         fun() ->
                 ?info("Req: ~p State:~p", [Req, State]),
@@ -82,20 +81,25 @@ response(Req, 'enter-contract'=State) ->
                 ?info("JSON: ~p", [JSON]),
                 {[{<<"contract_id">>, ContractId0},
                   {<<"ec_pubkey">>, ECPubKey},
-                  {<<"rsa_pubkey">>, RSAPubKey}]} = jiffy:decode(JSON),
+                  {<<"rsa_pubkey">>, RSAPubKey},
+                  {<<"enc_ec_privkey">>, EncECPrivkey},
+                  {<<"enc_rsa_privkey">>, EncRSAPrivkey}
+                 ]} = jiffy:decode(JSON),
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
                 Response = mw_contract:enter_contract(ContractId,
-                                                      ECPubKey, RSAPubKey),
+                                                      ECPubKey,
+                                                      RSAPubKey,
+                                                      EncECPrivkey,
+                                                      EncRSAPrivkey),
                 ?info("Respone: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
     ?info("Respone JSON: ~p", [JSON]),
 
-    %% allow access from other port - actually from anywhere
-    Req1 = cowboy_req:set_resp_header(<<"Access-Control-Allow-Origin">>,
-                                      <<"*">>, Req),
+    %% Enable browser CORS
+    Req1 = mw_lib:cowboy_req_enable_cors(Req),
     {JSON, Req1, State};
 
 response(Req, 'clone-contract'=State) ->
@@ -243,3 +247,5 @@ json(Term) ->
 
 jsonL(L) ->
     lists:droplast(lists:flatten([ json(E) ++ "," || E <- L ])).
+
+

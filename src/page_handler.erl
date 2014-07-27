@@ -11,6 +11,7 @@
 %%%-------------------------------------------------------------------------%%%
 -module(page_handler).
 
+-include("log.hrl").
 -include("mw_contract.hrl").
 
 %% REST Callbacks
@@ -62,7 +63,9 @@ page(Req, State) ->
             <<"</title></head><body>">>,
             Body,
             <<"</body></html>\n">>],
-    {HTML, Req, somepath}. %% TODO somepath?
+    Req2 = mw_lib:cowboy_req_enable_cors(Req),
+    %% ?info("Page outgoing Req: ~p", [Req2]),
+    {HTML, Req2, somepath}. %% TODO somepath?
 
 %% home page inner html
 html(_Req, {index}=_State) ->
@@ -143,6 +146,8 @@ html(Req, {sign}=_State) ->
                   mw_contract:contract_event_happened(
                     History, ?STATE_DESC_TAKER_T1)} of
                 {true, true} ->
+                    %% TODO: only send out the strictly needed encrypted
+                    %% privkeys instead of all of them
                     merge(block(sign), [{contract_id, Id}] ++ Props);
                 _ ->
                     merge(block(wait), [{contract_id, Id}])
@@ -311,4 +316,3 @@ events_to_html([P | L]) ->
      proplists:get_value("event", P, <<"">>),
      <<" <\p>">>] ++
      events_to_html(L).
-

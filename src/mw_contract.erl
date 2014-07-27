@@ -54,45 +54,56 @@
 %%%===========================================================================
 %% Validations throw error so JSON handler can return nice error code / msg
 %% Any unhandled error (crash) will return default json error code / msg
-enter_contract(ContractId, ECPubKey, RSAPubKey) ->
-    ?info("Handling enter_contract with ContractId: ~p , ECPubKey: ~p"
-          "RSAPubKey: ~p", [ContractId, ECPubKey, RSAPubKey]),
+enter_contract(ContractId,
+               ECPubkey,
+               RSAPubkey,
+               EncECPrivkey,
+               EncRSAPrivkey) ->
+    ?info("Handling enter_contract with ContractId: ~p , ECPubkey: ~p"
+          "RSAPubkey: ~p EncECprivkey: ~p EncRSaprivkey: ~p",
+          [ContractId, ECPubkey, RSAPubkey, EncECPrivkey, EncRSAPrivkey]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
 
     %% https://en.bitcoin.it/wiki/Base58Check_encoding
     %% compressed EC pubkeys in base58check encoding is 50 chars
-    api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
+    api_validation(is_binary(ECPubkey) andalso
+                   is_binary(catch mw_lib:dec_b58check(ECPubkey)),
                    ?EC_PUBKEY_TYPE),
-    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
+    api_validation((byte_size(ECPubkey) == 50), ?EC_PUBKEY_LEN),
 
-    api_validation(is_binary(RSAPubKey) andalso
+    api_validation(is_binary(RSAPubkey) andalso
                    %% http://erlang.org/doc/man/public_key.html#pem_decode-1
-                   length(catch public_key:pem_decode(RSAPubKey)) == 1,
+                   length(catch public_key:pem_decode(RSAPubkey)) == 1,
                    ?RSA_PUBKEY_TYPE),
     %% TODO: what lengths can PEM encoded RSA 2048 pubkeys have?
-    % api_validation((byte_size(RSAPubKey) == 902), ?RSA_PUBKEY_LEN),
+    % api_validation((byte_size(RSAPubkey) == 902), ?RSA_PUBKEY_LEN),
 
-    ok = do_enter_contract(ContractId, ECPubKey, RSAPubKey),
+    %% TODO: validation of encrypted privkeys in hex, what is length?
+
+    ok = do_enter_contract(ContractId,
+                           ECPubkey,
+                           RSAPubkey,
+                           EncECPrivkey,
+                           EncRSAPrivkey),
     [{"success-message", "ok"}].
 
-submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
-    ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubKey: ~p, "
+submit_t2_signature(ContractId, ECPubkey, T2Signature) ->
+    ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubkey: ~p, "
           "T2Signature: ~p",
-          [ContractId, ECPubKey, T2Signature]),
+          [ContractId, ECPubkey, T2Signature]),
     api_validation(is_integer(ContractId), ?CONTRACT_ID_TYPE),
 
-    api_validation(is_binary(ECPubKey) andalso
-                   is_binary(catch mw_lib:dec_b58check(ECPubKey)),
+    api_validation(is_binary(ECPubkey) andalso
+                   is_binary(catch mw_lib:dec_b58check(ECPubkey)),
                    ?EC_PUBKEY_TYPE),
-    api_validation((byte_size(ECPubKey) == 50), ?EC_PUBKEY_LEN),
+    api_validation((byte_size(ECPubkey) == 50), ?EC_PUBKEY_LEN),
 
     api_validation(is_binary(catch mw_lib:hex_to_bin(T2Signature)),
                    ?SIGNATURE_TYPE),
     api_validation(bitcoin_signature_der(mw_lib:hex_to_bin(T2Signature)),
                    ?SIGNATURE_TYPE),
 
-    ok = do_submit_t2_signature(ContractId, ECPubKey, T2Signature),
+    ok = do_submit_t2_signature(ContractId, ECPubkey, T2Signature),
     [{"success-message", "ok"}].
 
 get_t3_for_signing(ContractId, ToAddress) ->
@@ -140,11 +151,13 @@ get_contract_t2_state(Id) ->
     {ok, Info}  = get_contract_info(Id),
     GetInfo     = ?GET(Info),
     History     = GetInfo("history"),
-    EventPubKey = GetInfo("event_pubkey"),
-    GiverPubKey = GetInfo("giver_ec_pubkey"),
-    TakerPubKey = GetInfo("taker_ec_pubkey"),
+    EventPubkey = GetInfo("event_pubkey"),
+    GiverPubkey = GetInfo("giver_ec_pubkey"),
+    TakerPubkey = GetInfo("taker_ec_pubkey"),
     Value       = <<"2000000">>,
 
+    %% TODO: only return the strictly needed encrypted
+    %% privkeys instead of all of them
     %% TODO: for now we simplify flow and assume both have sent T1
     %% when we get first T2 from Bj
     case {contract_event_happened(History, ?STATE_DESC_GIVER_ENTERED),
@@ -153,15 +166,15 @@ get_contract_t2_state(Id) ->
           contract_event_happened(History, ?STATE_DESC_TAKER_T1)} of
         {true, true, false, false} ->
             %% call Bj to see if t1 outputs are available as t2 inputs
-            ReqRes = bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey,
-                                            EventPubKey, Value),
+            ReqRes = bj_req_get_unsigned_t2(GiverPubkey, TakerPubkey,
+                                            EventPubkey, Value),
             ?info("bj_req_get_unsigned_t2: ~p", [ReqRes]),
             GetRes = ?GET(ReqRes),
             case GetRes("error-message") of
                 not_found ->
                     T2SigHashInput0 = GetRes("t2-sighash-input-0"), %% giver
                     T2SigHashInput1 = GetRes("t2-sighash-input-1"), %% taker
-                    T2Raw = GetRes("t2-raw"), %% taker
+                    T2Raw = GetRes("t2-raw"),
                     T2Hash = GetRes("t2-hash"),
                     ok = mw_pg:update_contract_t2(Id,
                                                   T2SigHashInput0,
@@ -185,7 +198,9 @@ get_contract_t2_state(Id) ->
 
 get_contract_info(Id) ->
     {ok, MatchNo, Headline, Desc, Outcome,
-     EventPubKey, GiverECPubKey, TakerECPubKey,
+     EventPubkey, GiverECPubkey, TakerECPubkey,
+     GiverEncECPrivkey, TakerEncECPrivkey,
+     GiverEncRSAPrivkey, TakerEncRSAPrivkey,
      EncEventKeyYes, EncEventKeyNo,
      T2SigHashInput0, T2SigHashInput1, T2Raw, T2Hash,
      FormatedEvents} =
@@ -198,9 +213,13 @@ get_contract_info(Id) ->
           {"headline", Headline},
           {"desc", Desc},
           {"outcome", Outcome},
-          {"event_pubkey", EventPubKey},
-          {"giver_ec_pubkey", GiverECPubKey},
-          {"taker_ec_pubkey", TakerECPubKey},
+          {"event_pubkey", EventPubkey},
+          {"giver_ec_pubkey", GiverECPubkey},
+          {"taker_ec_pubkey", TakerECPubkey},
+          {"giver_enc_ec_privkey", GiverEncECPrivkey},
+          {"taker_enc_ec_privkey", TakerEncECPrivkey},
+          {"giver_enc_rsa_privkey", GiverEncRSAPrivkey},
+          {"taker_enc_rsa_privkey", TakerEncRSAPrivkey},
           {"event_key_enc_with_oracle_yes_and_giver_keys", EncEventKeyYes},
           {"event_key_enc_with_oracle_no_and_taker_keys", EncEventKeyNo},
           {"t2_sighash_input_0", T2SigHashInput0},
@@ -223,29 +242,29 @@ clone_contract(Id) ->
     ok = mw_pg:insert_contract_event(NewId, ?STATE_DESC_CLONED),
     [{"new_contract", NewId}].
 
-create_oracle_keys(NoPubKey, NoPrivKey, YesPubKey, YesPrivKey) ->
+create_oracle_keys(NoPubkey, NoPrivkey, YesPubkey, YesPrivkey) ->
     %% Validations for EC keys
-    %%api_validation(is_binary(NOPubKey), ?EC_PUBKEY_TYPE),
-    %%api_validation(is_binary(YESPubKey), ?EC_PUBKEY_TYPE),
-    %%api_validation((byte_size(NOPubKey) == 130), ?PUBKEY_LEN),
-    %%api_validation((byte_size(YESPubKey) == 130), ?PUBKEY_LEN),
-    {ok, Id} = mw_pg:insert_oracle_keys(NoPubKey, NoPrivKey,
-                                        YesPubKey, YesPrivKey),
+    %%api_validation(is_binary(NOPubkey), ?EC_PUBKEY_TYPE),
+    %%api_validation(is_binary(YESPubkey), ?EC_PUBKEY_TYPE),
+    %%api_validation((byte_size(NOPubkey) == 130), ?PUBKEY_LEN),
+    %%api_validation((byte_size(YESPubkey) == 130), ?PUBKEY_LEN),
+    {ok, Id} = mw_pg:insert_oracle_keys(NoPubkey, NoPrivkey,
+                                        YesPubkey, YesPrivkey),
     {ok, Id}.
 
 create_event(MatchNum, Headline, Desc, OracleKeysId,
-             EventPrivKey, EventPubKey) ->
-    {ok, NoPubKeyPEM, YesPubKeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
-    {ok, NoPubKey}  = pem_decode_bin(NoPubKeyPEM),
-    {ok, YesPubKey} = pem_decode_bin(YesPubKeyPEM),
-    EventPrivKeyEncWithOracleNoKey =
-        hybrid_aes_rsa_enc(EventPrivKey, NoPubKey),
-    EventPrivKeyEncWithOracleYesKey =
-        hybrid_aes_rsa_enc(EventPrivKey, YesPubKey),
+             EventPrivkey, EventPubkey) ->
+    {ok, NoPubkeyPEM, YesPubkeyPEM} = mw_pg:select_oracle_keys(OracleKeysId),
+    {ok, NoPubkey}  = pem_decode_bin(NoPubkeyPEM),
+    {ok, YesPubkey} = pem_decode_bin(YesPubkeyPEM),
+    EventPrivkeyEncWithOracleNoKey =
+        hybrid_aes_rsa_enc(EventPrivkey, NoPubkey),
+    EventPrivkeyEncWithOracleYesKey =
+        hybrid_aes_rsa_enc(EventPrivkey, YesPubkey),
     {ok, EventId} =
-        mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubKey,
-                           EventPrivKeyEncWithOracleNoKey,
-                           EventPrivKeyEncWithOracleYesKey),
+        mw_pg:insert_event(MatchNum, Headline, Desc, OracleKeysId, EventPubkey,
+                           EventPrivkeyEncWithOracleNoKey,
+                           EventPrivkeyEncWithOracleYesKey),
     {ok, EventId}.
 
 
@@ -276,22 +295,31 @@ create_contract_event(Event) ->
 %% TODO: think about abstraction concerns regarding matching on postgres 'null'
 %% TODO: this assumes giver always enters first
 %% TODO: generalize
-do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
-    {ok, RSAPubKey} = pem_decode_bin(RSAPubKeyHex),
+do_enter_contract(ContractId,
+                  ECPubkey,
+                  RSAPubkeyPEM,
+                  EncECPrivkey,
+                  EncRSAPrivkey) ->
+    {ok, RSAPubkey} = pem_decode_bin(RSAPubkeyPEM),
     {YesOrNo, GiverOrTaker, _GiverKey} =
         case mw_pg:select_contract_ec_pubkeys(ContractId) of
             {ok, null, null}          -> {yes, giver, nope};
-            {ok, GiverECPubKey, null} -> {no, taker, GiverECPubKey};
-            {ok, _GiverECPubKey, _TakerECPubKey} ->
+            {ok, GiverECPubkey, null} -> {no, taker, GiverECPubkey};
+            {ok, _GiverECPubkey, _TakerECPubkey} ->
                 ?API_ERROR(?CONTRACT_FULL);
             {error,{ok,[]}} ->
                 ?API_ERROR(?CONTRACT_NOT_FOUND)
         end,
     {ok, EncEventKey} =
         mw_pg:select_enc_event_privkey(ContractId, YesOrNo),
-    DoubleEncEventKey = hybrid_aes_rsa_enc(EncEventKey, RSAPubKey),
-    ok = mw_pg:update_contract_enter(ContractId, GiverOrTaker,
-                               ECPubKey, RSAPubKeyHex, DoubleEncEventKey),
+    DoubleEncEventKey = hybrid_aes_rsa_enc(EncEventKey, RSAPubkey),
+    ok = mw_pg:update_contract_enter(ContractId,
+                                     GiverOrTaker,
+                                     ECPubkey,
+                                     RSAPubkeyPEM,
+                                     EncECPrivkey,
+                                     EncRSAPrivkey,
+                                     DoubleEncEventKey),
     EnteredEvent = case GiverOrTaker of
                        giver -> ?STATE_DESC_GIVER_ENTERED;
                        taker -> ?STATE_DESC_TAKER_ENTERED
@@ -299,21 +327,21 @@ do_enter_contract(ContractId, ECPubKey, RSAPubKeyHex) ->
     ok = mw_pg:insert_contract_event(ContractId, EnteredEvent),
     ok.
 
-do_submit_t2_signature(ContractId, ECPubKey, T2Signature) ->
+do_submit_t2_signature(ContractId, ECPubkey, T2Signature) ->
     {ok, Info}  = get_contract_info(ContractId),
     GetInfo     = ?GET(Info),
-    GiverPubKey = GetInfo("giver_ec_pubkey"),
-    TakerPubKey = GetInfo("taker_ec_pubkey"),
+    GiverPubkey = GetInfo("giver_ec_pubkey"),
+    TakerPubkey = GetInfo("taker_ec_pubkey"),
 
     %% validate contract event states? e.g. duplicated signing reqs
-    GiverOrTaker = case ECPubKey of
-                       GiverPubKey -> <<"giver">>;
-                       TakerPubKey -> <<"taker">>;
+    GiverOrTaker = case ECPubkey of
+                       GiverPubkey -> <<"giver">>;
+                       TakerPubkey -> <<"taker">>;
                        _           -> ?API_ERROR(?EC_PUBKEY_MISMATCH)
                    end,
     T2Raw = GetInfo("t2_raw"),
     ReqRes =
-        bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker),
+        bj_req_submit_t2_signature(ECPubkey, T2Signature, T2Raw, GiverOrTaker),
     NewT2     = proplists:get_value("t2-raw-partially-signed", ReqRes),
     NewT2Hash = proplists:get_value("new-t2-hash", ReqRes),
     ok = mw_pg:update_contract_t2(ContractId, NewT2, NewT2Hash),
@@ -334,7 +362,8 @@ do_get_t3_for_signing(ContractId, ToAddress) ->
     {ok, Info}  = get_contract_info(ContractId),
     GetInfo     = ?GET(Info),
     History     = GetInfo("history"),
-
+    %% TODO: only return the strictly needed encrypted
+    %% privkeys instead of all of them
     case {contract_event_happened(History, ?STATE_DESC_T2_BROADCASTED),
           contract_event_happened(History, ?STATE_DESC_EVENT_OUTCOME_HAPPENED),
           contract_event_happened(History, ?STATE_DESC_T3_BROADCASTED)} of
@@ -365,6 +394,11 @@ do_get_t3_for_signing(ContractId, ToAddress) ->
             {ok, OPK} = mw_pg:select_oracle_privkey(ContractId, YesOrNo),
             EncEventKey = mw_lib:bin_to_hex(GetInfo(EventKeyName)),
             [
+             %% TODO: improve this mapping and also what enc keys are returned
+             {"giver_enc_ec_privkey", GetInfo("giver_enc_ec_privkey")},
+             {"taker_enc_ec_privkey", GetInfo("taker_enc_ec_privkey")},
+             {"giver_enc_rsa_privkey", GetInfo("giver_enc_rsa_privkey")},
+             {"taker_enc_rsa_privkey", GetInfo("taker_enc_rsa_privkey")},
              {"oracle_privkey", base64:encode(OPK)}, %% Avoids line breaks in JS
              {"enc_event_privkey", EncEventKey},
              {"t3-sighash", T3Sighash},
@@ -409,13 +443,13 @@ contract_event_happened(History, Event) ->
         _   -> true
     end.
 
-bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
+bj_req_get_unsigned_t2(GiverPubkey, TakerPubkey, EventPubkey,
                        Value) ->
     QS = cow_qs:qs(
            [
-            {<<"giver-pubkey">>, GiverPubKey},
-            {<<"taker-pubkey">>, TakerPubKey},
-            {<<"event-pubkey">>, EventPubKey},
+            {<<"giver-pubkey">>, GiverPubkey},
+            {<<"taker-pubkey">>, TakerPubkey},
+            {<<"event-pubkey">>, EventPubkey},
             {<<"value">>, Value}
            ]),
     %% TODO: delete this log
@@ -446,12 +480,12 @@ bj_req_get_unsigned_t2(GiverPubKey, TakerPubKey, EventPubKey,
         end,
     Res.
 
-bj_req_submit_t2_signature(ECPubKey, T2Signature, T2Raw, GiverOrTaker) ->
+bj_req_submit_t2_signature(ECPubkey, T2Signature, T2Raw, GiverOrTaker) ->
     QS = cow_qs:qs(
            [
             {<<"t2-signature">>, T2Signature},
             {<<"t2-raw">>, T2Raw},
-            {<<"pubkey">>, ECPubKey},
+            {<<"pubkey">>, ECPubkey},
             {<<"sign-for">>, GiverOrTaker}
            ]),
     %% TODO: delete this log
@@ -560,7 +594,7 @@ rsa_key_from_file(PrivPath) ->
     Bin.
 
 %% TODO: this assumes RSA 2048.
-hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
+hybrid_aes_rsa_enc(Plaintext, RSAPubkey) ->
     %% TODO: validate entropy source! We may want to block for /dev/random
     %% to be sure the AES key is cryptographically strong.
     AESKey = crypto:strong_rand_bytes(16),
@@ -573,7 +607,7 @@ hybrid_aes_rsa_enc(Plaintext, RSAPubKey) ->
                                       ?DEFAULT_AES_IV, PaddedPlaintext),
     %% Use OAEP as it's supported by Tom Wu's rsa2.js (RSADecryptOAEP)
     %% http://en.wikipedia.org/wiki/Optimal_Asymmetric_Encryption_Padding
-    {_RecordName, Modulus, Exponent} = RSAPubKey,
+    {_RecordName, Modulus, Exponent} = RSAPubkey,
     EncAESKey = crypto:public_encrypt(rsa, AESKey, [Exponent, Modulus],
                                       rsa_pkcs1_oaep_padding),
     %% Distinguishable prefix to identify the binary in case it's on the loose
@@ -626,14 +660,14 @@ manual_test_2() ->
     {ok, _} = create_contract(1),
     ok.
 
-decryption_test(_UserECPrivKey, UserRSAPrivKeyPEM,
-                OraclePrivKeyHex, EncEventKey) ->
-    {ok, UserRSAPrivKey} = pem_decode_bin(UserRSAPrivKeyPEM),
-    {ok, OraclePrivKey} = pem_decode_bin(mw_lib:hex_to_bin(OraclePrivKeyHex)),
+decryption_test(_UserECPrivkey, UserRSAPrivkeyPEM,
+                OraclePrivkeyHex, EncEventKey) ->
+    {ok, UserRSAPrivkey} = pem_decode_bin(UserRSAPrivkeyPEM),
+    {ok, OraclePrivkey} = pem_decode_bin(mw_lib:hex_to_bin(OraclePrivkeyHex)),
 
     <<_Prefix:8/binary, EncAESKey:256/binary, CipherText1/binary>> =
         mw_lib:hex_to_bin(EncEventKey),
-    AESKey = public_key:decrypt_private(EncAESKey, UserRSAPrivKey),
+    AESKey = public_key:decrypt_private(EncAESKey, UserRSAPrivkey),
     Plaintext1 = crypto:block_decrypt(aes_cbc128,
                                       AESKey,
                                       ?DEFAULT_AES_IV,
@@ -642,7 +676,7 @@ decryption_test(_UserECPrivKey, UserRSAPrivKeyPEM,
     <<_Prefix:8/binary,
       EncAESKey2:256/binary,
       CipherText2/binary>> = remove_pkcs_7_padding(Plaintext1),
-    AESKey2 = public_key:decrypt_private(EncAESKey2, OraclePrivKey),
+    AESKey2 = public_key:decrypt_private(EncAESKey2, OraclePrivkey),
     Plaintext2Padded = crypto:block_decrypt(aes_cbc128,
                                             AESKey2,
                                             ?DEFAULT_AES_IV,
