@@ -1,6 +1,5 @@
 <div class=main>
 
-
   <!-- LIBS -->
 
   <!-- BitcoinJS -->
@@ -27,18 +26,17 @@
 
   <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
 
-  <!-- RSA -->
+    <!-- Crypto-JS -->
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/cipher-core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/evpkdf.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/mode-cfb.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/enc-base64.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha1.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/format-hex.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/pad-nopadding.js"></script>
 
-  <!-- for pkcs5pkey -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
-  <!-- for crypto -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
   <!-- for crypto, asn1, asn1x509 -->
   <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script>
   <!-- for asn1x509(stohex) -->
@@ -77,11 +75,17 @@
   <p>
     <ul>
       <li>
-        <b>Please send BTC 0.02 to <span id=addr><font color=red>[An address should appear here.]</font></span></b>
+    <b>Enter password and click "Generate"</b>
+    <textarea id=user_password class=mark></textarea>
+    <button class=mark onClick="generate_keys()">Generate</button>
         <br />
         <br />
-      </li>
-
+      </li>    
+      <li>
+        <b>Please send BTC 0.02 to address below.</b>
+        <br />
+        <br />
+      </li>    
       <li>
         <b>Please copy and keep handy:</b>
         <br />
@@ -90,22 +94,6 @@
           <li><b>1. Bet Address (base58check) :</b>
             <br />
             <p id=betaddr style="font-family: monospace; white-space: pre;"><font color=red>[An address should appear here.]</font></p>
-          </li>
-          <li><b>2. EC Public Key (compressed; base58check) :</b>
-            <br />
-            <p id=ecpub style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-          </li>
-          <li><b>3. EC Private Key (compressed, base58check) :</b>
-            <br />
-            <p id=ecpriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-          </li>
-          <li><b>4. RSA Public Key (PEM) :</b>
-            <br />
-            <p id=rsapub style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
-          </li>
-          <li><b>5. RSA Private Key (PEM) :</b>
-            <br />
-            <p id=rsapriv style="font-family: monospace; white-space: pre;"><font color=red>[A key should appear here.]</font></p>
           </li>
         </ul>
       </li>
@@ -148,7 +136,12 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
    return Bitcoin.Base58.encode(bytes);
  };
 
+function generate_keys() {
+
     console.log(ok = "start");
+
+    var userPassword0 = document.getElementById("user_password");
+    var userPassword = userPassword0.value;
 
     // create EC key (private part)
     var ec = new Bitcoin.ECKey();
@@ -182,18 +175,24 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     rsaPubPEMEnc = rsaPubPEMEnc.replace(/\n/g, "\\n");
     var rsaPubPEMEnc = encodeURIComponent(rsaPubPEMEnc);
 
+    var encECPrivkey  = CryptoJS.AES.encrypt(ecPrivB58Check, userPassword);
+    var encRSAPrivkey = CryptoJS.AES.encrypt(rsaPrivPEM, userPassword);
+
     console.log("address: " + addr);
 
     console.log("EC priv key (hex): " + ecPrivHex);
     console.log("EC priv key (base58): " + ecPrivB58);
-    console.log("EC priv key (exported): " + ecPrivB58Check);
+    console.log("EC priv key (base58check): " + ecPrivB58Check);
 
     console.log("EC pub key (hex): " + ecPubHex);
     console.log("EC pub key (base58): " + ecPubB58);
-    console.log("EC pub key (exported): " + ecPubB58Check);
+    console.log("EC pub key (base58check): " + ecPubB58Check);
 
     console.log("RSA Private Key PEM: " + rsaPrivPEM);
     console.log("RSA Public  Key PEM: " + rsaPubPEM);
+
+    console.log("AES encrypted EC priv key (base58check): " + encECPrivkey);
+    console.log("AES encrypted RSA Private Key PEM: " + encRSAPrivkey);
 
     // Print address to screen
     var Tag = document.getElementById("betaddr");
@@ -222,11 +221,14 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     // ----------
 
     var contract_id = "$CONTRACT_ID";
-    var url = "http://127.0.0.1:8081/enter-contract/{" +
-              "\"contract_id\":\"" + contract_id + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(ecPubB58Check) + "\"," +
-              "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"}";
-
+    var url =
+        "http://127.0.0.1:8081/enter-contract/{" +
+        "\"contract_id\":\"" + contract_id + "\"," +
+        "\"ec_pubkey\":\"" + encodeURIComponent(ecPubB58Check) + "\"," +
+        "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"," +
+        "\"enc_ec_privkey\":\"" + encodeURIComponent(encECPrivkey) + "\"," +
+        "\"enc_rsa_privkey\":\"" + encodeURIComponent(encRSAPrivkey) + "\"}";
+    
     var Tag = document.getElementById("url");
     if(Tag) Tag.innerHTML = "<font color=blue>" + url + "</font>";
 
@@ -243,6 +245,7 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     var oktag = document.getElementById("ok");
     if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
 
-  </script>
+}
 
+</script>   
 </div>

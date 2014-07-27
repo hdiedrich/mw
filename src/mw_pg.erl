@@ -66,6 +66,10 @@ select_contract_info(Id) ->
     Statement2 =
         "SELECT e.match_no, e.headline, e.description, e.outcome, "
         "       e.event_pubkey, c.giver_ec_pubkey, c.taker_ec_pubkey, "
+        "       c.giver_enc_ec_privkey, "
+        "       c.taker_enc_ec_privkey, "
+        "       c.giver_enc_rsa_privkey, "
+        "       c.taker_enc_rsa_privkey, "
         "       c.event_key_enc_with_oracle_yes_and_giver_keys, "
         "       c.event_key_enc_with_oracle_no_and_taker_keys, "
         "       c.t2_sighash_input_0, c.t2_sighash_input_1, "
@@ -79,6 +83,10 @@ select_contract_info(Id) ->
            {<<"event_pubkey">>, EventPubKey},
            {<<"giver_ec_pubkey">>, GiverECPubKey},
            {<<"taker_ec_pubkey">>, TakerECPubKey},
+           {<<"giver_enc_ec_privkey">>, GiverEncECPrivkey},
+           {<<"taker_enc_ec_privkey">>, TakerEncECPrivkey},
+           {<<"giver_enc_rsa_privkey">>, GiverEncRSAPrivkey},
+           {<<"taker_enc_rsa_privkey">>, TakerEncRSAPrivkey},
            {<<"event_key_enc_with_oracle_yes_and_giver_keys">>, EncEventKeyYes},
            {<<"event_key_enc_with_oracle_no_and_taker_keys">>, EncEventKeyNo},
            {<<"t2_sighash_input_0">>, T2SigHashInput0},
@@ -98,6 +106,8 @@ select_contract_info(Id) ->
     FormatedEvents = lists:map(FormatEvent, Events),
     {ok, MatchNo, Headline, Desc, Outcome,
      EventPubKey, GiverECPubKey, TakerECPubKey,
+     GiverEncECPrivkey, TakerEncECPrivkey,
+     GiverEncRSAPrivkey, TakerEncRSAPrivkey,
      EncEventKeyYes, EncEventKeyNo,
      T2SigHashInput0, T2SigHashInput1, T2Raw, T2Hash,
      FormatedEvents}.
@@ -155,22 +165,45 @@ clone_contract(Id) ->
     {ok, NewId}.
 
 %% Add giver or taker
-update_contract_enter(Id, GiverOrTaker, ECPubKey, RSAPubKey, EventKeyDoubleEnc) ->
-    {ECKeyColumn, RSAKeyColumn, EventKeyColumn} =
+update_contract_enter(Id,
+                      GiverOrTaker,
+                      ECPubKey,
+                      RSAPubKey,
+                      EncECPrivkey,
+                      EncRSAPrivkey,
+                      EventKeyDoubleEnc) ->
+    {ECPubkeyColumn,
+     RSAPubkeyColumn,
+     EncECPrivkeyColumn,
+     EncRSAPrivkeyColumn,
+     EventKeyColumn} =
         case GiverOrTaker of
-            giver -> {"giver_ec_pubkey", "giver_rsa_pubkey",
+            giver -> {"giver_ec_pubkey",
+                      "giver_rsa_pubkey",
+                      "giver_enc_ec_privkey",
+                      "giver_enc_rsa_privkey",
                       "event_key_enc_with_oracle_yes_and_giver_keys"};
-            taker -> {"taker_ec_pubkey", "taker_rsa_pubkey",
+            taker -> {"taker_ec_pubkey",
+                      "taker_rsa_pubkey",
+                      "taker_enc_ec_privkey",
+                      "taker_enc_rsa_privkey",
                       "event_key_enc_with_oracle_no_and_taker_keys"}
         end,
     Statement =
         "UPDATE contracts SET " ++
-        ECKeyColumn    ++ " = " ++ "$1, " ++
-        RSAKeyColumn   ++ " = " ++ "$2, " ++
-        EventKeyColumn ++ " = " ++ "$3 "  ++
-        "WHERE id = $4;",
+        ECPubkeyColumn ++ " = " ++ "$1, " ++
+        RSAPubkeyColumn ++ " = " ++ "$2, " ++
+        EncECPrivkeyColumn ++ " = " ++ "$3, " ++
+        EncRSAPrivkeyColumn ++ " = " ++ "$4, " ++
+        EventKeyColumn   ++ " = " ++ "$5 "  ++
+        "WHERE id = $6;",
     Params = lists:map(fun mw_pg_lib:ensure_epgsql_type/1,
-                       [ECPubKey, RSAPubKey, EventKeyDoubleEnc, Id]),
+                       [ECPubKey,
+                        RSAPubKey,
+                        EncECPrivkey,
+                        EncRSAPrivkey,
+                        EventKeyDoubleEnc,
+                        Id]),
     {ok, _} = mw_pg_lib:parse_insert_result(
                 mw_pg_lib:equery(Statement, Params)),
     ok.

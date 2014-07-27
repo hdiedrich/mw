@@ -6,10 +6,7 @@
   <p>
     <ll>
       <li>
-        Below, please paste the private EC key that you copied earlier.
-      </li>
-      <li>
-        Then, please click 'sign'.
+        Please Enter passphrase and click 'sign'.
       </li>
     </ll>
   </p>
@@ -18,7 +15,7 @@
     until the bet is resolved.
   </p>
 
-  <textarea id=signer_priv_key class=mark></textarea>
+  <textarea id=signer_passphrase class=mark></textarea>
 
   <button class=mark onClick="sign()">sign</button>
 
@@ -106,18 +103,20 @@
 
   <script type="text/javascript" src="../bitcoinjs/paillier.js"></script>
 
-  <!-- RSA -->
+    <!-- Crypto-JS -->
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/cipher-core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/core.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/evpkdf.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/mode-cfb.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/enc-base64.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha1.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha256.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/format-hex.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/tripledes.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/pad-nopadding.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/md5.js"></script>
 
-  <!-- for pkcs5pkey -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/cipher-core.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/md5.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/tripledes.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64.js"></script>
-  <!-- for crypto -->
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha256.js"></script>
-  <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/aes.js"></script>
   <!-- for crypto, asn1, asn1x509 -->
   <script src="http://yui.yahooapis.com/2.9.0/build/yahoo/yahoo-min.js"></script>
   <!-- for asn1x509(stohex) -->
@@ -147,36 +146,56 @@
 
   <script type="text/javascript" src="/jquery/jquery-1.11.1.min.js"></script>
 
-<script>
+    <script>
 
-  Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
+Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
     var hash = this.getPub();
     while (hash.length < 32) hash.unshift(0);
     var checksum = Crypto.SHA256(Crypto.SHA256(hash, {asBytes: true}), {asBytes: true});
     var bytes = hash.concat(checksum.slice(0,4));
     return Bitcoin.Base58.encode(bytes);
-  };
+};
 
-  function fail(text) {
+// http://stackoverflow.com/questions/3745666/how-to-convert-from-hex-to-ascii-in-javascript
+function hex2a(hexx) {
+    var hex = hexx.toString();//force conversion
+    var str = '';
+    for (var i = 0; i < hex.length; i += 2)
+        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    return str;
+}
+
+function fail(text) {
     var ws = document.getElementById("status");
     if(ws) ws.innerHTML = "<font color=red>" + text + "</font>";
-  }
+}
 
-
-  function sign() {
+function sign() {
 
     console.log("sign");
 
-    var t2Raw = "$T2_RAW";
-    var t2SighashInput0 = "$T2_SIGHASH_INPUT_0";
-    var t2SighashInput1 = "$T2_SIGHASH_INPUT_1";
+    var t2Raw                 = "$T2_RAW";
+    var t2SighashInput0       = "$T2_SIGHASH_INPUT_0";
+    var t2SighashInput1       = "$T2_SIGHASH_INPUT_1";
     var giverECPubkeyB58Check = "$GIVER_EC_PUBKEY";
     var takerECPubkeyB58Check = "$TAKER_EC_PUBKEY";
 
+    // TODO: here we hardcode the taker signing. Figure out how to determine if
+    // we have giver or taker BEFORE we can match on the decrypted EC key
+    var signerEncECPrivkey    = "$TAKER_ENC_EC_PRIVKEY";
+
     console.log("check");
 
-    var signerPrivKey0 = document.getElementById("signer_priv_key");
-    var signerPrivkeyB58Check = signerPrivKey0.value;
+    var signerPassphrase0 = document.getElementById("signer_passphrase");
+    var signerPassphrase = signerPassphrase0.value;
+    
+    console.log("signerPassphrase: " + signerPassphrase);
+    console.log("signerEncECPrivkey: " + signerEncECPrivkey);
+
+    var signerPrivkeyHex = CryptoJS.AES.decrypt(signerEncECPrivkey, signerPassphrase);
+    var signerPrivkeyB58Check = hex2a(signerPrivkeyHex);
+
+    console.log("signerPrivkeyB58Check: " + signerPrivkeyB58Check);
 
     // validate input
     var signerECKey0;
@@ -184,7 +203,7 @@
         signerECKey0 = Bitcoin.ECKey.decodeString(signerPrivkeyB58Check);
     } catch (err) {
         console.log(err);
-        fail("bad key: " + err);
+        fail("bad key: " + err + " (most likely passphrase is wrong)");
         return;
     }
 
@@ -224,9 +243,9 @@
 
     var contract_id = "$CONTRACT_ID";
     var url = "http://127.0.0.1:8081/submit-t2-signature/{" +
-              "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
-              "\"ec_pubkey\":\"" + encodeURIComponent(signerECPubkeyB58Check) + "\"," +
-              "\"t2_signature\":\"" + encodeURIComponent(signatureHex) + "\"}";
+        "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
+        "\"ec_pubkey\":\"" + encodeURIComponent(signerECPubkeyB58Check) + "\"," +
+        "\"t2_signature\":\"" + encodeURIComponent(signatureHex) + "\"}";
 
     console.log("url: " + url);
 
@@ -234,11 +253,11 @@
     if(tag) tag.innerHTML = "<font color=blue>" + url + "</font>";
 
     $.ajax({
-             url: url,
-             success: function(response,status,xhr) {
-                $( "#result" ).html(xhr.responseText)
-             }
-             });
+        url: url,
+        success: function(response,status,xhr) {
+            $( "#result" ).html(xhr.responseText)
+        }
+    });
 
     // Print an ok to screen and JS console.
     // -------------------------------------
@@ -247,6 +266,6 @@
     if(oktag) oktag.innerHTML = "<font color=lime>" + ok + "</font>";
 
     console.log("ok");
-  }
+}
 
 </script>
