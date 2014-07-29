@@ -80,12 +80,12 @@
     <button class=mark onClick="generate_keys()">Generate</button>
         <br />
         <br />
-      </li>    
+      </li>
       <li>
         <b>Please send BTC 0.02 to address below.</b>
         <br />
         <br />
-      </li>    
+      </li>
       <li>
         <b>Please copy and keep handy:</b>
         <br />
@@ -228,7 +228,7 @@ function generate_keys() {
         "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"," +
         "\"enc_ec_privkey\":\"" + encodeURIComponent(encECPrivkey) + "\"," +
         "\"enc_rsa_privkey\":\"" + encodeURIComponent(encRSAPrivkey) + "\"}";
-    
+
     var Tag = document.getElementById("url");
     if(Tag) Tag.innerHTML = "<font color=blue>" + url + "</font>";
 
@@ -247,5 +247,5 @@ function generate_keys() {
 
 }
 
-</script>   
+</script>
 </div>

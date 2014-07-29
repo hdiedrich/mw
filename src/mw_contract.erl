@@ -85,7 +85,7 @@ enter_contract(ContractId,
                            RSAPubkey,
                            EncECPrivkey,
                            EncRSAPrivkey),
-    [{"success-message", "ok"}].
+    {[{<<"success-message">>, <<"ok">>}]}.
 
 submit_t2_signature(ContractId, ECPubkey, T2Signature) ->
     ?info("Handling submit_signed_t2_hash with ContractId: ~p , ECPubkey: ~p, "
@@ -104,7 +104,7 @@ submit_t2_signature(ContractId, ECPubkey, T2Signature) ->
                    ?SIGNATURE_TYPE),
 
     ok = do_submit_t2_signature(ContractId, ECPubkey, T2Signature),
-    [{"success-message", "ok"}].
+    {[{<<"success-message">>, <<"ok">>}]}.
 
 get_t3_for_signing(ContractId, ToAddress) ->
     ?info("Handling get_t3_for_signing with ContractId: ~p , ToAddress: ~p ",
@@ -119,7 +119,7 @@ get_t3_for_signing(ContractId, ToAddress) ->
                    ?ADDRESS_LEN),
 
     ResultProps = do_get_t3_for_signing(ContractId, ToAddress),
-    [{"success-message", "ok"}] ++ ResultProps.
+    {[{<<"success-message">>, <<"ok">>}] ++ ResultProps}.
 
 submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
     ?info("Handling submit_t3_signatures with ContractId: ~p "
@@ -140,7 +140,7 @@ submit_t3_signatures(ContractId, T3Raw, T3Signature1, T3Signature2) ->
     %% TODO: return more stuff in JSON response?
     _JSONRes = do_submit_t3_signatures(ContractId,
                                        T3Raw, T3Signature1, T3Signature2),
-    [{"success-message", "ok"}].
+    {[{<<"success-message">>, <<"ok">>}]}.
 
 %%%===========================================================================
 %%% Internal Erlang API (e.g. called by cron jobs / internal Mw services) but

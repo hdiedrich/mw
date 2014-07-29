@@ -65,12 +65,12 @@ response(Req, hello=State) ->
 
 response(Req, sample=State) ->
     io:format("Req: ~p~n~n State:~p~n~n", [Req, State]),
-    JSON = json([{sample, sample1()}]),
+    JSON = jiffy:encode([{sample, sample1()}]),
     {JSON, Req, State};
 
 response(Req, 'bet-list'=State) ->
     io:format("Req: ~p~n~n State:~p~n~n", [Req, State]),
-    JSON = json([{'bet-list', sample2()}]),
+    JSON = jiffy:encode([{'bet-list', sample2()}]),
     {JSON, Req, State};
 
 response(Req, 'enter-contract'=State) ->
@@ -92,11 +92,11 @@ response(Req, 'enter-contract'=State) ->
                                                       RSAPubKey,
                                                       EncECPrivkey,
                                                       EncRSAPrivkey),
-                ?info("Respone: ~p", [Response]),
+                ?info("Response: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
-    ?info("Respone JSON: ~p", [JSON]),
+    ?info("Response JSON: ~p", [JSON]),
 
     %% Enable browser CORS
     Req1 = mw_lib:cowboy_req_enable_cors(Req),
@@ -111,11 +111,11 @@ response(Req, 'clone-contract'=State) ->
                 ContractId = erlang:list_to_integer(
                                binary:bin_to_list(ContractId0)),
                 Response = mw_contract:clone_contract(ContractId),
-                ?info("Respone: ~p", [Response]),
+                ?info("Response: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
-    ?info("Respone JSON: ~p", [JSON]),
+    ?info("Response JSON: ~p", [JSON]),
     {JSON, Req, State};
 
 response(Req, 'submit-t2-signature'=State) ->
@@ -130,11 +130,11 @@ response(Req, 'submit-t2-signature'=State) ->
                                binary:bin_to_list(ContractId0)),
                 Response = mw_contract:submit_t2_signature(ContractId, ECPubKey,
                                                            T2Signature),
-                ?info("Respone: ~p", [Response]),
+                ?info("Response: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
-    ?info("Respone JSON: ~p", [JSON]),
+    ?info("Response JSON: ~p", [JSON]),
     {JSON, Req, State};
 
 response(Req, 'get-t3-for-signing'=State) ->
@@ -150,11 +150,11 @@ response(Req, 'get-t3-for-signing'=State) ->
                                binary:bin_to_list(ContractId0)),
                 Response =
                     mw_contract:get_t3_for_signing(ContractId, ToAddress),
-                ?info("Respone: ~p", [Response]),
+                ?info("Response: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
-    ?info("Respone JSON: ~p", [JSON]),
+    ?info("Response JSON: ~p", [JSON]),
     {JSON, Req, State};
 
 response(Req, 'submit-t3-signatures'=State) ->
@@ -174,11 +174,11 @@ response(Req, 'submit-t3-signatures'=State) ->
                                                             T3Raw,
                                                             T3Signature1,
                                                             T3Signature2),
-                ?info("Respone: ~p", [Response]),
+                ?info("Response: ~p", [Response]),
                 Response
         end,
     JSON = handle_response(HandleFun),
-    ?info("Respone JSON: ~p", [JSON]),
+    ?info("Response JSON: ~p", [JSON]),
     {JSON, Req, State}.
 
 %% Single, top-level try catch to ensure we return correct JSON error code / msg
@@ -187,17 +187,20 @@ response(Req, 'submit-t3-signatures'=State) ->
 %% for the correct case, without defensive coding.
 handle_response(HandleFun) ->
     try
-        json(HandleFun())
+        Response = HandleFun(),
+        %% ?info("Response: ~p", [Response]),
+        jiffy:encode(Response)
     catch throw:{api_error, {ErrorCode, ErrorMsg}} ->
             ?error("Handled API Error Code: ~p : ~p", [ErrorCode, ErrorMsg]),
-            json([{"error-code", ErrorCode}, {"error-message", ErrorMsg}]);
+            jiffy:encode({[{<<"error-code">>, ErrorCode}, {<<"error-message">>, ErrorMsg}]});
           Error:Reason ->
             Stack = erlang:get_stacktrace(),
             ?error("Unhandled Error: ~p Reason: ~p Stack: ~p",
                    [Error, Reason, Stack]),
-            json([{"error-code", 0},
-                  {"error-message", "Unknown Error. "
-                   "Something is on fire. Don't panic."}])
+            jiffy:encode({[{<<"error-code">>, 0},
+                           {<<"error-message">>,
+                            <<"Something is on fire. Don't panic. "
+                              "Blame Gustav.">>}]})
     end.
 
 %% ---------------------------------------------------------------------------
@@ -247,5 +250,3 @@ json(Term) ->
 
 jsonL(L) ->
     lists:droplast(lists:flatten([ json(E) ++ "," || E <- L ])).
-
-
