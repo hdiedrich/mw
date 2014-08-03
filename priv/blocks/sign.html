@@ -179,6 +179,8 @@ function sign() {
     var t2SighashInput1       = "$T2_SIGHASH_INPUT_1";
     var giverECPubkeyB58Check = "$GIVER_EC_PUBKEY";
     var takerECPubkeyB58Check = "$TAKER_EC_PUBKEY";
+    var serverHost            = "$SERVER_HOST";
+    console.log("serverHost: " + serverHost);
 
     // TODO: here we hardcode the taker signing. Figure out how to determine if
     // we have giver or taker BEFORE we can match on the decrypted EC key
@@ -188,7 +190,7 @@ function sign() {
 
     var signerPassphrase0 = document.getElementById("signer_passphrase");
     var signerPassphrase = signerPassphrase0.value;
-    
+
     console.log("signerPassphrase: " + signerPassphrase);
     console.log("signerEncECPrivkey: " + signerEncECPrivkey);
 
@@ -242,7 +244,7 @@ function sign() {
     // ----------
 
     var contract_id = "$CONTRACT_ID";
-    var url = "http://127.0.0.1:8081/submit-t2-signature/{" +
+    var url = "http://" + serverHost + ":8081/submit-t2-signature/{" +
         "\"contract_id\":\"" + encodeURIComponent(contract_id) + "\"," +
         "\"ec_pubkey\":\"" + encodeURIComponent(signerECPubkeyB58Check) + "\"," +
         "\"t2_signature\":\"" + encodeURIComponent(signatureHex) + "\"}";

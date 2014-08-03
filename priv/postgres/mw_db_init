@@ -99,6 +99,17 @@ contract_id int REFERENCES contracts (id) NOT NULL,
 contract_event_id int REFERENCES contract_events (id) NOT NULL
 );
 
+grant all privileges on schema public to mw;
+grant all privileges on oracle_keys to mw;
+grant all privileges on sequence oracle_keys_id_seq to mw;
+grant all privileges on events to mw;
+grant all privileges on sequence events_id_seq  to mw;
+grant all privileges on contracts  to mw;
+grant all privileges on sequence contracts_id_seq to mw;
+grant all privileges on contract_events to mw;
+grant all privileges on sequence contract_events_id_seq to mw;
+grant all privileges on contract_events_maps to mw;
+
 INSERT INTO countries (id, iso_3166_1_alpha_2, iso_3166_1_alpha_3, ioc, fifa, iso_3166_1_numeric, name, tld, currency_code, currency_name, phone_prefix, languages) VALUES
 ('1','AD','AND','AND','AND','020','Andorra','.ad','EUR','Euro','376','ca'),
 ('2','AE','ARE','UAE','UAE','784','United Arab Emirates','.ae','AED','Dirham','971','ar-AE,fa,en,hi,ur'),

@@ -189,7 +189,7 @@ handle_response(HandleFun) ->
     try
         Response = HandleFun(),
         %% ?info("Response: ~p", [Response]),
-        jiffy:encode(Response)
+        jiffy:encode({Response})
     catch throw:{api_error, {ErrorCode, ErrorMsg}} ->
             ?error("Handled API Error Code: ~p : ~p", [ErrorCode, ErrorMsg]),
             jiffy:encode({[{<<"error-code">>, ErrorCode}, {<<"error-message">>, ErrorMsg}]});

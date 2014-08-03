@@ -104,7 +104,10 @@ html(Req, {prep}=_State) ->
       none ->
         "ID error";
       _ ->
-            {ok, Props} = mw_contract:get_contract_info(binary_to_integer(Id)),
+            {ok, Props0} = mw_contract:get_contract_info(binary_to_integer(Id)),
+            {ok, ServerHost} = application:get_env(mw, server_host),
+            ?info("HURR: ~p", [ServerHost]),
+            Props = Props0 ++ [{server_host, ServerHost}],
             History = proplists:get_value("history", Props),
             HTML =
                 case {mw_contract:contract_event_happened(
@@ -124,7 +127,7 @@ html(Req, {prep}=_State) ->
                    {status, HistoryHTML},
                    {contract_id, Id},
                    {dump, prop_to_html(Props)}
-                  ])
+                  ] ++ Props)
     end;
 
 html(_Req, {pend}=State) ->
@@ -139,7 +142,9 @@ html(Req, {sign}=_State) ->
         "ID error";
       _ ->
             IdN = list_to_integer(binary_to_list(Id)),
-            {ok, Props} = mw_contract:get_contract_t2_state(IdN),
+            {ok, Props0} = mw_contract:get_contract_t2_state(IdN),
+            {ok, ServerHost} = application:get_env(mw, server_host),
+            Props = Props0 ++ [{server_host, ServerHost}],
             History = proplists:get_value("history", Props),
             case {mw_contract:contract_event_happened(
                     History, ?STATE_DESC_GIVER_T1),
@@ -189,8 +194,10 @@ html(Req, {cashout2}=_State) ->
       _ ->
         try
           Id = binary_to_integer(Id0),
-	      {ToAddress, _Req3} = cowboy_req:qs_val(<<"to_address">>, Req2),
-          Props = mw_contract:get_t3_for_signing(Id, ToAddress),
+          {ToAddress, _Req3} = cowboy_req:qs_val(<<"to_address">>, Req2),
+          Props0 = mw_contract:get_t3_for_signing(Id, ToAddress),
+          {ok, ServerHost} = application:get_env(mw, server_host),
+          Props = Props0 ++ [{server_host, ServerHost}],
           merge(block(cashout2),
             Props ++
             [{contract_id, Id},
