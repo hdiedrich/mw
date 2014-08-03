@@ -137,6 +137,8 @@ Bitcoin.ECKey.prototype.getExportedPublicKey = function () {
  };
 
 function generate_keys() {
+    var serverHost            = "$SERVER_HOST";
+    console.log("serverHost: " + serverHost);
 
     console.log(ok = "start");
 
@@ -222,7 +224,7 @@ function generate_keys() {
 
     var contract_id = "$CONTRACT_ID";
     var url =
-        "http://127.0.0.1:8081/enter-contract/{" +
+        "http://" + serverHost + ":8081/enter-contract/{" +
         "\"contract_id\":\"" + contract_id + "\"," +
         "\"ec_pubkey\":\"" + encodeURIComponent(ecPubB58Check) + "\"," +
         "\"rsa_pubkey\":\"" + rsaPubPEMEnc + "\"," +

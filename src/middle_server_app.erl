@@ -27,19 +27,19 @@ start(_Type, _Args) ->
     %% TODO: extract to node config file
     application:load(lager),
     application:load(mw),
-    application:set_env(mw, pools,
-                        [
-                         {pgsql_pool, [{size, 1}, {max_overflow, 1}],
-                          [
-                           {host, "localhost"},
-                           {dbname, "mw"},
-                           {user, "mw"},
-                           {pass, "mw"}
-                          ]}
-                        ]),
-
     %% TODO: application:ensure_all_started
     application:start(lager),
+    try
+        MwPriv = code:priv_dir(middle_server),
+        ConfigFile = filename:join([MwPriv, "config/node_config"]),
+        {ok, [Configs]} = file:consult(ConfigFile),
+        lists:map(fun({App, Param, Value}) ->
+                          ok = application:set_env(App, Param, Value)
+                  end, Configs)
+    catch E:R ->
+            ?error("Mw node config error: ~p", [{E,R,erlang:get_stacktrace()}]),
+            exit(mw_config_error)
+    end,
     application:set_env(lager, error_logger_hwm, 500),
     application:start(jiffy),
 
