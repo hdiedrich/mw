@@ -118,7 +118,7 @@ bj_http_req(URL, _BodyArgs, Timeout) ->
     %% TODO: does cowboy has something like this?
     %% Body = mochiweb_util:urlencode(BodyArgs),
     Headers = [], %% [{content_type, "application/x-www-form-urlencoded"}],
-    lhttpc:request(ensure_list(URL), post, Headers, [], Timeout).
+    lhttpc:request(ensure_list(URL), get, Headers, [], Timeout).
 
 ensure_list(B) when is_binary(B) -> binary:bin_to_list(B);
 ensure_list(L) when is_list(L) -> L.

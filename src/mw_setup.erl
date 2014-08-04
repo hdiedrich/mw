@@ -58,7 +58,7 @@ insert_wc_bet({_N, Headline, Detail}) ->
                                RSAPubKey,
                                %% As these are test givers for dev, we fake
                                %% the enc privkeys (they are never used)
-                               <<"">>, 
+                               <<"">>,
                                <<"">>
                               ),
     Total = erlang:get(mw_event_count),

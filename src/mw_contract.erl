@@ -30,11 +30,13 @@
 -define(DEFAULT_AES_IV, <<0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0>>).
 -define(BINARY_PREFIX, <<"A1EFFEC100000000">>).
 
--define(BJ_MOCKED, true).
--define(BJ_URL_GET_UNSIGNED_T2,     <<"http://localhost/get-unsigned-t2">>).
+-define(BJ_T2_MOCKED, false).
+-define(BJ_URL_GET_UNSIGNED_T2,     <<"http://orders3.freshworks2.net:4567/get-unsigned-t2">>).
+-define(BJ_URL_SUBMIT_T2_SIGNATURE, <<"http://orders3.freshworks2.net:4567/submit-t2-signature">>).
+
+-define(BJ_T3_MOCKED, true).
 -define(BJ_URL_GET_UNSIGNED_T3,     <<"http://localhost/get-unsigned-t3">>).
--define(BJ_URL_SUBMIT_T2_SIGNATURE, <<"http://localhost/submit-t2-signature">>).
--define(BJ_URL_SUBMIT_T3_SIGNATURES, <<"http://localhost/submit-t3-signatures">>).
+-define(BJ_URL_SUBMIT_T3_SIGNATURES, <<"http:///submit-t3-signatures">>).
 -define(BJ_REQUEST_TIMEOUT, 5000).
 
 %%%===========================================================================
@@ -154,7 +156,7 @@ get_contract_t2_state(Id) ->
     EventPubkey = GetInfo("event_pubkey"),
     GiverPubkey = GetInfo("giver_ec_pubkey"),
     TakerPubkey = GetInfo("taker_ec_pubkey"),
-    Value       = <<"2000000">>,
+    Value       = <<"20000">>,
 
     %% TODO: only return the strictly needed encrypted
     %% privkeys instead of all of them
@@ -170,12 +172,12 @@ get_contract_t2_state(Id) ->
                                             EventPubkey, Value),
             ?info("bj_req_get_unsigned_t2: ~p", [ReqRes]),
             GetRes = ?GET(ReqRes),
-            case GetRes("error-message") of
+            case GetRes(<<"error-message">>) of
                 not_found ->
-                    T2SigHashInput0 = GetRes("t2-sighash-input-0"), %% giver
-                    T2SigHashInput1 = GetRes("t2-sighash-input-1"), %% taker
-                    T2Raw = GetRes("t2-raw"),
-                    T2Hash = GetRes("t2-hash"),
+                    T2SigHashInput0 = GetRes(<<"t2-sig-hash-input0">>), %% giver
+                    T2SigHashInput1 = GetRes(<<"t2-sig-hash-input1">>), %% taker
+                    T2Raw = GetRes(<<"t2-raw">>),
+                    T2Hash = GetRes(<<"t2-hash">>),
                     ok = mw_pg:update_contract_t2(Id,
                                                   T2SigHashInput0,
                                                   T2SigHashInput1,
@@ -443,8 +445,11 @@ contract_event_happened(History, Event) ->
         _   -> true
     end.
 
-bj_req_get_unsigned_t2(GiverPubkey, TakerPubkey, EventPubkey,
+bj_req_get_unsigned_t2(GiverPubkey0, TakerPubkey0, EventPubkey0,
                        Value) ->
+    GiverPubkey = mw_lib:bin_to_hex(mw_lib:dec_b58check(GiverPubkey0)),
+    TakerPubkey = mw_lib:bin_to_hex(mw_lib:dec_b58check(TakerPubkey0)),
+    EventPubkey = mw_lib:bin_to_hex(mw_lib:dec_b58check(EventPubkey0)),
     QS = cow_qs:qs(
            [
             {<<"giver-pubkey">>, GiverPubkey},
@@ -452,19 +457,9 @@ bj_req_get_unsigned_t2(GiverPubkey, TakerPubkey, EventPubkey,
             {<<"event-pubkey">>, EventPubkey},
             {<<"value">>, Value}
            ]),
-    %% TODO: delete this log
-    log(?BJ_URL_GET_UNSIGNED_T2, QS,
-                {ok,
-                 [
-                  {"t2-sighash-input-0", "A1EFFEC100000000FF01"},
-                  {"t2-sighash-input-1", "A1EFFEC100000000FF02"},
-                  {"t2-raw", "A1EFFEC100000000FF03"},
-                  {"t2-hash", "A1EFFEC100000000FF33"}
-                 ]
-                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
-        case ?BJ_MOCKED of
+        case ?BJ_T2_MOCKED of
             true ->
                 {ok,
                  [
@@ -475,9 +470,16 @@ bj_req_get_unsigned_t2(GiverPubkey, TakerPubkey, EventPubkey,
                  ]
                  };
             false ->
-                mw_lib:bj_http_req(<<?BJ_URL_GET_UNSIGNED_T2/binary,
-                                     $?, QS/binary>>, [], 5000)
+                URL = <<?BJ_URL_GET_UNSIGNED_T2/binary,
+                        $?, QS/binary>>,
+                %% ?info("HURR URL: ~p", [URL]),
+                {ok, {{_StatusCode, _ReasonPhrase}, _Hdrs, ResponseBody}} =
+                    mw_lib:bj_http_req(URL, [], 5000),
+                %% ?info("HURR: ~p", [ResponseBody]),
+                {PL} = jiffy:decode(ResponseBody),
+                {ok, PL}
         end,
+    ?info("HURR Res: ~p", [Res]),
     Res.
 
 bj_req_submit_t2_signature(ECPubkey, T2Signature, T2Raw, GiverOrTaker) ->
@@ -488,18 +490,9 @@ bj_req_submit_t2_signature(ECPubkey, T2Signature, T2Raw, GiverOrTaker) ->
             {<<"pubkey">>, ECPubkey},
             {<<"sign-for">>, GiverOrTaker}
            ]),
-    %% TODO: delete this log
-    log(?BJ_URL_SUBMIT_T2_SIGNATURE, QS,
-                {ok,
-                 [
-                  {"new-t2-hash", "A1EFFEC100000000FF04"},
-                  {"t2-raw-partially-signed", "A1EFFEC100000000FF05"},
-                  {"t2-broadcasted", "true"}
-                 ]
-                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
-        case ?BJ_MOCKED of
+        case ?BJ_T2_MOCKED of
             true ->
                 {ok,
                  [
@@ -509,8 +502,13 @@ bj_req_submit_t2_signature(ECPubkey, T2Signature, T2Raw, GiverOrTaker) ->
                  ]
                  };
             false ->
-                mw_lib:bj_http_req(<<?BJ_URL_SUBMIT_T2_SIGNATURE/binary,
-                                     $?, QS/binary>>, [], 5000)
+                URL = <<?BJ_URL_SUBMIT_T2_SIGNATURE/binary,
+                        $?, QS/binary>>,
+                ?info("HURR URL: ~p", [URL]),
+                {ok, {{_StatusCode, _ReasonPhrase}, _Hdrs, ResponseBody}} =
+                    mw_lib:bj_http_req(URL, [], 5000),
+                {PL} = jiffy:decode(ResponseBody),
+                {ok, PL}
         end,
     Res.
 
@@ -520,18 +518,9 @@ bj_req_get_unsigned_t3(T2Hash, ToAddress) ->
             {<<"t2-hash">>, T2Hash},
             {<<"to-address">>, ToAddress}
            ]),
-    %% TODO: delete this log
-    log(?BJ_URL_GET_UNSIGNED_T3, QS,
-              {ok,
-                 [
-                  {"t3-sighash", "A1EFFEC100000000FF06"},
-                  {"t3-hash", "A1EFFEC100000000FF07"},
-                  {"t3-raw", "A1EFFEC100000000FF08"}
-                 ]
-                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
-        case ?BJ_MOCKED of
+        case ?BJ_T3_MOCKED of
             true ->
                 {ok,
                  [
@@ -553,18 +542,9 @@ bj_req_submit_t3_signatures(T3Raw, T3Signature1, T3Signature2) ->
             {<<"t3-signature1">>, T3Signature1},
             {<<"t3-signature2">>, T3Signature2}
            ]),
-    %% TODO: delete this log
-    log(?BJ_URL_SUBMIT_T3_SIGNATURES, QS,
-              {ok,
-                 [
-                  {"new-t3-hash", "A1EFFEC100000000FF09"},
-                  {"new-t3-raw", "A1EFFEC100000000FF10"},
-                  {"t3-broadcasted", "true"}
-                 ]
-                 }),
     %% TODO: parse response to proplist
     {ok, Res} =
-        case ?BJ_MOCKED of
+        case ?BJ_T3_MOCKED of
             true ->
                 {ok,
                  [
